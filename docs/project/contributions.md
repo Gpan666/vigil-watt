@@ -5,7 +5,7 @@
 
 ## 2026-10-20
 
-- **Gpan666**（PR 待开）：纳入三台设备——ATK F1 Ultimate 2.0 鼠标（`373B:11D9` / `11E4`，`AtkCodec`，16 字节 op 帧 + `(0x4D - sum)` 校验和）、ATK A98 Pro 键盘（`373B:1152`，`AtkViaCodec`，VIA `0x02/0x96/0x24`）、MCHOSE X9 耳机（`3837:6045`，`MchoseX9Codec`，64 字节查询帧）。ATK 两条链路并入新插件 `AtkPlugin`，共用一个品牌级开关 `PluginEnabled["Atk"]`（默认关，会写帧）；X9 并入现有 `MchosePlugin`，协议名 `headset-x9`，共用 `PluginEnabled["Mchose"]`。**代码由 AI（WorkBuddy 智能体）编写**，协议抓包、真机验证与审阅由贡献者完成；本仓库维护者未复测。未纳入任何 UI/设置页改动——设置页开关由反射自动出现，`Description` 一类本地 hack 不带入上游（`AGENTS.md` §9）。帧样本与验证范围见 [atk.md](../hardware/atk.md) / [mchose-x9.md](../hardware/mchose-x9.md)。
+- **Gpan666**（[#28](https://github.com/evren-oct/vigil-watt/pull/28)）：纳入三台设备——ATK F1 Ultimate 2.0 鼠标（`373B:11D9` / `11E4`，`AtkCodec`，16 字节 op 帧 + `(0x4D - sum)` 校验和）、ATK A98 Pro 键盘（`373B:1152`，`AtkViaCodec`，VIA `0x02/0x96/0x24`）、MCHOSE X9 耳机（`3837:6045`，`MchoseX9Codec`，64 字节查询帧）。ATK 两条链路并入新插件 `AtkPlugin`，共用一个品牌级开关 `PluginEnabled["Atk"]`（默认关，会写帧）；X9 并入现有 `MchosePlugin`，协议名 `headset-x9`，共用 `PluginEnabled["Mchose"]`。**代码由 AI（WorkBuddy 智能体）编写**，协议抓包、真机验证与审阅由贡献者完成；本仓库维护者未复测。未纳入任何 UI/设置页改动——设置页开关由反射自动出现，`Description` 一类本地 hack 不带入上游（`AGENTS.md` §9）。帧样本与验证范围见 [atk.md](../hardware/atk.md) / [mchose-x9.md](../hardware/mchose-x9.md)。
 
 ## 2026-10-19
 
