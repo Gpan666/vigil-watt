@@ -13,6 +13,7 @@
 
 | 设备 / 方案 | 来源与参考内容 | 本项目采用及验证 | 许可 / 边界 |
 |---|---|---|---|
+| AKG N9 Hybrid 接收器 | [HeadsetControl Airoha 协议](https://github.com/Sapd/HeadsetControl/blob/master/lib/devices/audeze_maxwell_device.hpp) 的 `06/07` 封装与 `0CD6` 查询；N9 真机控制输入和查询响应。 | 自行实现固定查询，限定 `0ECB:20D9` MI03 Col02；贡献者真机读取 50%，默认关闭。 | 未复制外部代码；只确认单点电量，充电状态未验证。见 [akg.md](akg.md)。 |
 | MCHOSE G87 旧代 dongle（report `0x13`） | 官方 M HUB 的会话与电量交互；通过官方软件抓包和 dongle 实机观测确认帧结构、校验、查询和推送。 | 按抓包与实机样本实现；本机 G87 已验证。 | 官方软件交互是协议依据，不表示引用其代码。具体帧与未定语义见 [protocols.md](protocols.md)。 |
 | MCHOSE QHW（新代 dongle） | [MCHOSE M HUB WEB](https://www.mchose.com.cn/#/home) 前端 JS 中的 `QhwCmdQueueItem`、命令表及 CZ 相关脚本。 | 按官方前端协议实现备用路径；适用于 `0x3837` 世代 dongle。当前用户设备 `41E4:2001` 不适用。 | 官方资料，非开源代码复用。入口与设备范围见 [protocols.md](protocols.md)。 |
 | Logitech HID++ 电量 | Logitech HID++ 1.0 / 2.0 的设备发现与电池特征；实时电量通知行为与 Logi Battery Dashboard 同源。 | 本项目自行实现 HID++ 报文与特征解析；Bolt + MX Master 3S 已真机验证。 | 现有协议手册未记录外部代码复用；Logi Battery Dashboard 只作为行为 / 协议线索。实现细节见 [protocols.md](protocols.md)。 |

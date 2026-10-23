@@ -8,6 +8,7 @@
 
 | 编号 | 一句话 | 证据 | 状态 |
 |---|---|---|---|
+| **CR-84** | AKG N9 Hybrid 只验证了 50% 电量点及插件认领，尚未核对官方 App、充电状态、关机与电量变化；充电暂保留 Unknown | `Plugins/Akg/AkgN9Codec.cs:TryParseBattery`、`hardware/akg.md` §2 | `open` |
 | **CR-57** | 小组件自绘投影未做。原判据基于 Win10 19045，本机已升到 26200（Win11），需按新系统重判 | `WidgetWindow.xaml.cs:ApplyWin10Chrome` | `open` |
 | **CR-60** | 贴片右键菜单的 owner 是任务栏子窗口，弹出和关闭未真机看 | `TaskbarPillWindow.cs:OnRightClick` | `open` |
 | **CR-63** | 贴片与 explorer 输入队列串在一起，UI 线程长阻塞可能冻住任务栏。未实测 | `TaskbarPillWindow.cs` | `open` |
