@@ -43,13 +43,18 @@ public sealed class AkgPlugin : BatteryPluginBase
 
     private int? Query(HidDeviceHandle handle, Func<bool> enabled)
     {
-        var percent = AkgN9Transport.Query(enabled,
+        var read = AkgN9Transport.Query(enabled,
             report => enabled() && IsCandidate(handle.Info)
                 && handle.WriteOutput(report, TimeSpan.FromMilliseconds(500)),
             () => handle.GetInputReport(AkgN9Codec.InputReportId), Thread.Sleep);
-        if (percent.HasValue) Log.Info($"AKG N9 Hybrid 电量查询: {percent}%");
+        if (read is { } result)
+        {
+            if (Log.IsEnabled(LogLevel.Info))
+                Log.InfoOnChange($"akg-battery:{handle.Info.DevicePath}", result.Percent.ToString(),
+                    $"AKG N9 Hybrid 电量查询: {result.Percent}% 原始={Log.Hex(result.Message)}");
+        }
         else if (enabled()) Log.Warn("AKG N9 Hybrid 电量查询未收到有效结果");
-        return percent;
+        return read?.Percent;
     }
 
     protected override string BuildDisplayName(HidDeviceInfo info) => "AKG N9 Hybrid";

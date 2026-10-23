@@ -169,13 +169,70 @@ public sealed class AkgN9Tests
     {
         var queue = new Queue<byte[]>(new[] { Report(Result(90)), Report(), Report(Ack), Report(Result(50)) });
         int writes = 0;
-        Assert.Equal(50, AkgN9Transport.Query(() => true, query =>
+        var reading = AkgN9Transport.Query(() => true, query =>
         {
             Assert.Equal(AkgN9Codec.CreateBatteryQuery(), query);
             writes++;
             return true;
-        }, () => queue.Dequeue(), _ => { }));
+        }, () => queue.Dequeue(), _ => { });
+        Assert.True(reading.HasValue);
+        Assert.Equal(50, reading.Value.Percent);
+        Assert.Equal(Result(50), reading.Value.Message);
         Assert.Equal(1, writes);
+        Assert.Empty(queue);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LateResultBeforeAckIsIgnored(bool sameReport)
+    {
+        var queue = new Queue<byte[]>();
+        queue.Enqueue(Report());
+        if (sameReport)
+            queue.Enqueue(Report(Result(90).Concat(Ack).Concat(Result(50)).ToArray()));
+        else
+        {
+            queue.Enqueue(Report(Result(90)));
+            queue.Enqueue(Report(Ack.Concat(Result(50)).ToArray()));
+        }
+        int writes = 0;
+        var reading = AkgN9Transport.Query(() => true, _ => { writes++; return true; },
+            () => queue.Dequeue(), _ => { });
+        Assert.True(reading.HasValue);
+        Assert.Equal(50, reading.Value.Percent);
+        Assert.Equal(Result(50), reading.Value.Message);
+        Assert.Equal(1, writes);
+        Assert.Empty(queue);
+    }
+
+    [Fact]
+    public void ResultWithoutAckIsNotAccepted()
+    {
+        var queue = new Queue<byte[]>(new[] { Report(), Report(Result(90)) });
+        int writes = 0;
+        Assert.Null(AkgN9Transport.Query(() => true, _ => { writes++; return true; },
+            () => queue.Count > 0 ? queue.Dequeue() : Report(), _ => { }));
+        Assert.Equal(1, writes);
+        Assert.Empty(queue);
+    }
+
+    [Fact]
+    public void AckFromTimedOutQueryDoesNotAuthorizeNextResult()
+    {
+        var queue = new Queue<byte[]>(new[] { Report(), Report(Ack) });
+        int writes = 0;
+        (int Percent, byte[] Message)? Query() => AkgN9Transport.Query(() => true,
+            _ => { writes++; return true; }, () => queue.Count > 0 ? queue.Dequeue() : Report(), _ => { });
+        Assert.Null(Query());
+        queue.Enqueue(Report());
+        queue.Enqueue(Report(Result(90)));
+        queue.Enqueue(Report(Ack.Concat(Result(50)).ToArray()));
+        var reading = Query();
+        Assert.True(reading.HasValue);
+        Assert.Equal(50, reading.Value.Percent);
+        Assert.Equal(Result(50), reading.Value.Message);
+        Assert.Equal(2, writes);
         Assert.Empty(queue);
     }
 

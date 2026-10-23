@@ -9,7 +9,7 @@ namespace VigilWatt.Core.Plugins.Akg;
 /// </summary>
 internal static class AkgN9Transport
 {
-    public static int? Query(Func<bool> enabled, Func<byte[], bool> write,
+    public static (int Percent, byte[] Message)? Query(Func<bool> enabled, Func<byte[], bool> write,
         Func<byte[]?> read, Action<TimeSpan> delay)
     {
         if (!enabled()) return null;
@@ -24,6 +24,7 @@ internal static class AkgN9Transport
         if (!enabled() || !write(AkgN9Codec.CreateBatteryQuery())) return null;
 
         var assembler = new AkgN9PacketAssembler();
+        bool acknowledged = false;
         var elapsed = Stopwatch.StartNew();
         for (int i = 0; i < 60 && elapsed.Elapsed < TimeSpan.FromSeconds(3); i++)
         {
@@ -34,9 +35,13 @@ internal static class AkgN9Transport
             foreach (var message in messages)
             {
                 if (!AkgN9Codec.IsBatteryMessage(message)) continue;
-                if (message[1] == 0x5B && !AkgN9Codec.IsSuccessfulAck(message)) return null;
-                if (message[1] == 0x5D)
-                    return AkgN9Codec.TryParseBattery(message, out int percent) ? percent : null;
+                if (message[1] == 0x5B)
+                {
+                    if (!AkgN9Codec.IsSuccessfulAck(message)) return null;
+                    acknowledged = true;
+                }
+                if (message[1] == 0x5D && acknowledged)
+                    return AkgN9Codec.TryParseBattery(message, out int percent) ? (percent, message) : null;
             }
         }
         return null;
