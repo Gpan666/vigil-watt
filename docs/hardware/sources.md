@@ -30,6 +30,8 @@
 | MCHOSE Gmouse 主动查询（`3837:4245`） | 官方 M HUB 网页端 `/gmouse` 打包 JS 与社区项目 [aliezzzz/mchose-battery](https://github.com/aliezzzz/mchose-battery) 的 `src/protocols/g3.rs`（Rust）。 | 只发一条 `00 55 30 A5 0B 2E 01 01 01…`（65 字节）查询帧，应答前缀 `AA 30`，电量 `[off+8]`、充电 `[off+9]`；并入迈从插件共用品牌级开关，默认关。 | 未复用厂商/社区代码，按公开协议事实自行实现；社区实现与 [mchose.md](mchose.md) §4 逐字节一致（官方 JS 未逐字节复核）。本机 G3 V2 真机验证（读到 86% 未充电）。见 [mchose.md](mchose.md) §4。 |
 | 弱水时砂炽天使 2.4G | 官方 RoseLink（Flutter + BLE 自定义协议）及官方升级助手逆向；同时检查 2.4G dongle 的 HID 通道。 | 用于确认 RoseLink 电量协议不含电量命令、正常 2.4G 模式无可用电量通道；本项目不接入该设备电量。 | 逆向结论用于能力边界判断，不包含外部代码复用。见 [protocols.md](protocols.md)。 |
 | Classic Bluetooth 耳机电量 | Windows HFP 网关设备节点的 `DEVPKEY_Device_BatteryLevel` 属性；与 Windows 设置显示同源。 | 通过 PnP 设备节点读取；本机 EDIFIER W820NB 已验证。 | Windows 系统属性读取方案；不是 BLE AEP 属性。实现背景见 [runtime-pitfalls.md](../dev/runtime-pitfalls.md)。 |
+| ATK / VXE 无线鼠标 17 字节查询帧 | 公开逆向项目 [0x44oge-ATK](https://github.com/ReformedDoge/0x44oge-ATK)（含 `calculateAtkChecksum` 与 "Only one that works" 的写入方式说明），本项目另做真机复核。 | 自行实现帧编解码（`AtkCodec`）；本机 F1 Pro Max `373B:101B` 已验证 95% / 4092 mV，与 ATK HUB 共存无冲突。 | 参考公开的协议分析自行实现，未复制其代码。休眠占位帧与设备归一见 [atk.md](atk.md)。 |
+| HyperX CF2 2.4G 推送帧 | 本机对 `FF90` 口的被动抓包（脚本独立于本项目），充电/放电状态与官方 NGENUITY 3.1.0 显示逐次对照。 | 零写入被动解析（`Cf2Codec`）；本机 CF2 飓风炫彩版 `03F0:0AC1` 已验证（放电 40%、充电 94→96%）。 | 全部由本机抓包事实得出，未复用厂商代码。字段推断被实机证伪两次的过程见 [hyperx-cf2.md](hyperx-cf2.md) §4。 |
 
 ## 应用功能与实现方案
 
