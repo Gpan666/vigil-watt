@@ -20,6 +20,8 @@
 
 审查标准在 `docs/dev/review-standard.md`，未修项全集在 `docs/reviews/BACKLOG.md`（不要在本文再抄一份）。
 
+HERO 68 Air 2.4G 适配已加入狼蛛插件，共用默认关闭的 `Aula` 开关；贡献者真机验证 10% 放电/充电及插件认领、轮询。协议依据与复测边界见 `hardware/aula.md` §2，休眠退避沿用 CR-81。
+
 设备接入已收五批（#36 CHERRY/派世、#25 黑爵/雷神、#33 迈从 K7、#23 寸渊影弑/盖世小鸡、#18 前行者），逐台状态见 §2 表；两个 `integrate/*` 本地分支已删。设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
