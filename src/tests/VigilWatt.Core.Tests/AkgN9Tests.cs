@@ -237,7 +237,7 @@ public sealed class AkgN9Tests
     }
 
     [Fact]
-    public void BusyQueueIsBoundedAndPreventsWrite()
+    public void PersistentNonemptySnapshotIsBoundedAndPreventsWrite()
     {
         int reads = 0, writes = 0;
         Assert.Null(AkgN9Transport.Query(() => true, _ => { writes++; return true; },
@@ -282,8 +282,97 @@ public sealed class AkgN9Tests
     [Fact]
     public void ReadFailureBeforeQueryDoesNotWrite()
     {
+        int writes = 0, reads = 0;
+        Assert.Null(AkgN9Transport.Query(() => true, _ => { writes++; return true; },
+            () => { reads++; return null; }, _ => { }));
+        Assert.Equal(20, reads);
+        Assert.Equal(0, writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TransientReadFailuresRecoverWithinTheWindow(bool afterWrite)
+    {
+        var wrongId = Report();
+        wrongId[0] = 6;
+        int reads = 0, writes = 0;
+        var result = AkgN9Transport.Query(() => true, _ => { writes++; return true; }, () =>
+        {
+            int step = reads++;
+            if (afterWrite && step == 0) return Report();
+            step -= afterWrite ? 1 : 0;
+            if (step == 0) return null;
+            if (step == 1) return wrongId;
+            return writes == 0 ? Report() : Report(Ack.Concat(Result()).ToArray());
+        }, _ => { });
+        Assert.True(result.HasValue);
+        Assert.Equal(50, result.Value.Percent);
+        Assert.Equal(1, writes);
+        Assert.Equal(4, reads);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RepeatedPartialSnapshotIsAppendedOnce(bool stalePaddingChanges)
+    {
+        var first = Report(Ack.Concat(Result()[..5]).ToArray());
+        var repeated = first.ToArray();
+        if (stalePaddingChanges) repeated[^1] = 0xA5;
+        int reads = 0, writes = 0;
+        var result = AkgN9Transport.Query(() => true, _ => { writes++; return true; }, () => reads++ switch
+        {
+            0 => Report(),
+            1 => first,
+            2 => repeated,
+            _ => Report(Result()[5..]),
+        }, _ => { });
+        Assert.True(result.HasValue);
+        Assert.Equal(Result(), result.Value.Message);
+        Assert.Equal(1, writes);
+        Assert.Equal(4, reads);
+    }
+
+    [Fact]
+    public void IdenticalAckAndBatterySnapshotsAreAcceptedInSuccessiveQueries()
+    {
+        bool pending = false;
         int writes = 0;
-        Assert.Null(AkgN9Transport.Query(() => true, _ => { writes++; return true; }, () => null, _ => { }));
+        byte[] Read()
+        {
+            if (!pending) return Report();
+            pending = false;
+            return Report(Ack.Concat(Result()).ToArray());
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            var result = AkgN9Transport.Query(() => true,
+                _ => { writes++; pending = true; return true; }, Read, _ => { });
+            Assert.True(result.HasValue);
+            Assert.Equal(50, result.Value.Percent);
+        }
+        Assert.Equal(2, writes);
+    }
+
+    [Fact]
+    public void InvalidExpectedReportFailsClosedWithoutWriting()
+    {
+        var report = Report();
+        report[1] = 60;
+        int writes = 0;
+        Assert.Null(AkgN9Transport.Query(() => true, _ => { writes++; return true; }, () => report, _ => { }));
+        Assert.Equal(0, writes);
+    }
+
+    [Fact]
+    public void DisabledDuringTransientReadRecoveryStopsWithoutWriting()
+    {
+        bool enabled = true;
+        int reads = 0, writes = 0;
+        Assert.Null(AkgN9Transport.Query(() => enabled, _ => { writes++; return true; },
+            () => { reads++; return null; }, _ => enabled = false));
+        Assert.Equal(1, reads);
         Assert.Equal(0, writes);
     }
 }

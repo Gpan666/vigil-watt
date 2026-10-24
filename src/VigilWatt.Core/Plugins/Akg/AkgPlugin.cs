@@ -46,7 +46,8 @@ public sealed class AkgPlugin : BatteryPluginBase
         var read = AkgN9Transport.Query(enabled,
             report => enabled() && IsCandidate(handle.Info)
                 && handle.WriteOutput(report, TimeSpan.FromMilliseconds(500)),
-            () => handle.GetInputReport(AkgN9Codec.InputReportId), Thread.Sleep);
+            () => handle.GetInputReport(AkgN9Codec.InputReportId), Thread.Sleep,
+            Log.IsEnabled(LogLevel.Debug) ? Log.Debug : null);
         if (read is { } result)
         {
             if (Log.IsEnabled(LogLevel.Info))

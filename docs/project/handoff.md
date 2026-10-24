@@ -20,8 +20,8 @@
 
 审查标准在 `docs/dev/review-standard.md`，未修项全集在 `docs/reviews/BACKLOG.md`（不要在本文再抄一份）。
 
-HERO 68 Air 2.4G 适配已加入狼蛛插件，共用默认关闭的 `Aula` 开关；贡献者真机验证 10% 放电/充电及插件认领、轮询。协议依据与复测边界见 `hardware/aula.md` §2，休眠退避沿用 CR-81。
-AKG N9 Hybrid 接收器已接入默认关闭的 `Akg` 插件，贡献者真机 C# 插件认领读取 50%，充电状态保留未知；协议与验证边界见 `hardware/akg.md`，未完成验证见 CR-84。
+PR #44 的目标已改为 `dev`（2026-10-24），沿用 `feat/aula-hero68-air`，不另建 PR。两个品牌均继承 `BatteryPluginBase`，主动通信默认关闭，不进入每 15 秒常规发现。
+HERO 68 Air 贡献者真机验证 10% 放电/充电，维护者认可可合入；AKG N9 已见 50% / 100% 电量，充电状态未知。用户观察充电时无法工作并取消充电测试，正常工作状态的自然轮询证据见 `hardware/akg.md`；其它验证边界 CR-81/84，HERO 传输层测试 CR-97。[维护者原文](https://github.com/evren-oct/vigil-watt/pull/44#issuecomment-6368872663)。
 
 设备接入已收五批（#36 CHERRY/派世、#25 黑爵/雷神、#33 迈从 K7、#23 寸渊影弑/盖世小鸡、#18 前行者），逐台状态见 §2 表；两个 `integrate/*` 本地分支已删。设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。
 
@@ -65,7 +65,7 @@ AKG N9 Hybrid 接收器已接入默认关闭的 `Akg` 插件，贡献者真机 C
 
 ## 4. 待办
 
-审查未修项以 `docs/reviews/BACKLOG.md` 为准。这里只留还要人去做的事。
+审查未修项以 `docs/reviews/BACKLOG.md` 为准。PR #44 待验证项见 CR-84，HERO 非阻塞传输层测试见 CR-97；充电测试已取消，不等待插拔充电操作。其它人工待办如下。
 
 1. **迈从充电标志**：插上充电线，看日志里的状态字节，补全 `ParseKeyboardV1Charge`（已知 0x10 位 = 充电中）。
 2. **雷柏充满**：放电 0x01、充电 0x02 已校准。充满时 `[7]` 还没采到，采到再补映射。
