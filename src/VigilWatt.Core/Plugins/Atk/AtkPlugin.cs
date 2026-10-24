@@ -71,8 +71,14 @@ public sealed class AtkPlugin : BatteryPluginBase
         if (info.VendorId != VendorId || info.UsagePage != UsagePageBattery)
             return false;
 
+        // 长度判据：必须能收发 17 字节电量帧，否则写不进/读不出完整帧。
+        // 接收器用严格判据（in=17 / out=17，本机实测 0x101B、0x101A、0x1303 三者一致）；
+        // 本体的接口长度未实测（插充电线时才枚举出来），只要求"容得下"这一能力。
         if (IsReceiverPid(info.ProductId))
-            return true;
+            return AtkCodec.IsSupportedInterface(info.InputReportLength, info.OutputReportLength);
+
+        if (info.InputReportLength < AtkCodec.ReportLength || info.OutputReportLength < AtkCodec.ReportLength)
+            return false;
 
         // 其余 PID 视为"有线本体"（插充电线时枚举出来的鼠标本体）。
         // 本体 PID **因型号而异**（实测 F1 Pro Max = 0x1015、F1 V3 ULTIMATE+ = 0x12A9），
@@ -165,7 +171,7 @@ public sealed class AtkPlugin : BatteryPluginBase
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
     {
         // 接口预检查：写不进 17 字节 output 的接口直接排除（北通经验：长度从 caps 读）
-        if (handle.Info.OutputReportLength < 1 + AtkCodec.PayloadLength) return null;
+        if (handle.Info.OutputReportLength < AtkCodec.ReportLength) return null;
 
         if (!WriteQuery(handle, AtkCodec.BuildQuery())) return null;
         if (AtkCodec.TryParseReply(ReadBatteryResponse(handle, TimeSpan.FromSeconds(2))) is not { } r)
