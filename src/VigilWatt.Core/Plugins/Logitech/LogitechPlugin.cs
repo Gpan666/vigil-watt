@@ -8,11 +8,12 @@ using VigilWatt.Core.Utils;
 namespace VigilWatt.Core.Plugins.Logitech;
 
 /// <summary>
-/// 功 能： 罗技 2.4G 插件：支持 Unifying / Bolt / Lightspeed / Nano 接收器、USB 直连设备（HID++ 协议）。
+/// 功 能： 罗技品牌插件：PRO X 2 使用基类 Centurion 流程；其它设备保留既有 HID++ 流程。
 /// 2026/10/06 15:53:36 xliu
+/// 2026/10/23 20:58:09 nyamu
 /// 电量读取级联：Unified Battery 0x1004 → Battery Status 0x1000 → Battery Voltage 0x1001 → ADC Measurement 0x1F20 → HID++ 1.0 寄存器 0x07/0x0D（协议细节见 docs/hardware/logitech.md）。
 /// </summary>
-public sealed class LogitechPlugin : IBatteryPlugin
+public sealed class LogitechPlugin : BatteryPluginBase, IBatteryPlugin
 {
     public const ushort LogitechVid = 0x046D;
     public const ushort HidppUsagePage = 0xFF43;
@@ -32,30 +33,25 @@ public sealed class LogitechPlugin : IBatteryPlugin
     /// <summary>插件开关的键，与 <c>AppSettings.PluginEnabled</c> 对应（插件开关即写入开关，见 <see cref="WritesEnabled"/>）。</summary>
     public const string SettingsKey = "Logitech";
 
-    public string Name => SettingsKey;
-    public string DisplayName => "罗技";
-    public string DisplayNameEn => "LOGITECH";
+    public override string Name => SettingsKey;
+    public override string DisplayName => "罗技";
+    public override string DisplayNameEn => "LOGITECH";
 
     /// <summary>罗技接收器同时管鼠标和键盘，按型号分不出来 → Unknown，UI 退回按名字猜。</summary>
-    public DeviceKind Kind => DeviceKind.Unknown;
+    public override DeviceKind Kind => DeviceKind.Unknown;
 
     /// <summary>HID++ 探测要写帧（ping / GetFeature），不参与 15 秒快速发现节拍，避免写入频率上升。</summary>
-    public bool SupportsFastDiscovery => false;
+    public override bool SupportsFastDiscovery => false;
 
     /// <summary>同理不参与：HID++ 的发现要 ping 7 个槽位（睡着时约 10 秒），每 15 秒跑一遍代价太高；
     /// 罗技靠自发的 HID++ 通知做实时更新，不需要加快发现节拍。</summary>
-    public bool SupportsDiscoveryProbe => false;
+    public override bool SupportsDiscoveryProbe => false;
 
-    /// <summary>HID++ 自发电量/充电通知 → DeviceManager 即时 Upsert（对照浏览器扩展的实时更新）。</summary>
-    public event Action<DeviceStatus>? StatusPushed;
+    /// <summary>写入许可 = **插件开关**（默认关）。罗技没有只读模式，"开着却关写入"只会让人以为坏了（CR-37）。
+    /// 两个写点同一道闸门：HID++ 经 <c>HidppIO.WritesAllowed</c> 读它，Centurion 在 <c>WriteOutput</c> 前直接查它（CR-01）。</summary>
+    protected override bool WritesEnabled => IsWritesEnabled(SettingsKey);
 
-    /// <summary>
-    /// 写入许可 = **插件开关**（<c>PluginEnabled["Logitech"]</c>）。罗技的发现、电量读取、名字/配对信息全靠写帧，
-    /// 没有可用的只读模式——"插件开着但关掉写入许可"是没有任何使用场景的组合，只会让用户以为功能坏了（CR-37）。
-    /// 闸门本身仍是唯一写点内的 <c>HidppIO.WritesAllowed</c>（CR-01）。
-    /// </summary>
-    public static bool WritesEnabled =>
-        AppSettings.Load().PluginEnabled.TryGetValue(SettingsKey, out var on) && on;
+    protected override OfflinePolicy Offline { get; } = new() { CountPollFailures = false, MaxFailures = 4 };
 
     /// <summary>熔断阈值：连续这么多次查询无应答就停写。</summary>
     private const int MaxConsecutiveFailures = 3;
@@ -82,6 +78,10 @@ public sealed class LogitechPlugin : IBatteryPlugin
         info.VendorId == LogitechVid &&
         (info.UsagePage == HidppUsagePage || info.Usage == HidppUsagePage ||
          info.UsagePage == VendorUsagePage || info.Usage == VendorUsagePage);
+
+    private static bool IsCenturionCandidate(HidDeviceInfo info)
+        => CenturionCodec.IsSupportedInterface(info.VendorId, info.ProductId, info.UsagePage, info.Usage,
+            info.InputReportLength, info.OutputReportLength);
 
     private readonly ConcurrentDictionary<string, ReceiverSession> _sessions = new();
 
@@ -121,9 +121,13 @@ public sealed class LogitechPlugin : IBatteryPlugin
         public Task? ListenTask;
     }
 
-    public Task<IReadOnlyList<DeviceStatus>> AttachAsync(
+    public new async Task<IReadOnlyList<DeviceStatus>> AttachAsync(
         IReadOnlyList<HidDeviceInfo> availableDevices, DeviceClaimRegistry claims)
-        => Task.Run(() => AttachCore(availableDevices, claims));
+    {
+        var centurion = await base.AttachAsync(availableDevices, claims).ConfigureAwait(false);
+        var legacy = await Task.Run(() => AttachCore(availableDevices, claims)).ConfigureAwait(false);
+        return centurion.Concat(legacy).ToArray();
+    }
 
     private IReadOnlyList<DeviceStatus> AttachCore(
         IReadOnlyList<HidDeviceInfo> availableDevices, DeviceClaimRegistry claims)
@@ -139,6 +143,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
 
         foreach (var info in availableDevices)
         {
+            if (IsCenturionCandidate(info)) continue;
             if (!IsHidppInterface(info))
                 continue;
             // 写入许可关闭：HID++ 的发现与读数全靠写帧，直接不认领（safety.md §3 规则 2）。
@@ -195,28 +200,78 @@ public sealed class LogitechPlugin : IBatteryPlugin
         }
 
         // 已拔出的接收器（与 ReconcileRemovals 同一套动作，别再各写一遍）
-        claimed.AddRange(ReconcileRemovals(availableDevices));
+        claimed.AddRange(ReconcileLegacyRemovals(availableDevices));
         return claimed;
     }
 
-    /// <summary>只拆"扫描结果里已经没有"的接收器会话：停监听、关句柄、把槽位设备标离线并**上报**。</summary>
-    public IReadOnlyList<DeviceStatus> ReconcileRemovals(IReadOnlyList<HidDeviceInfo> availableDevices)
-    {
-        // 与基类同一处保护：空扫描是枚举失败，不是全部拔出。
-        if (availableDevices.Count == 0) return Array.Empty<DeviceStatus>();
+    protected override bool IsCandidate(HidDeviceInfo info) => IsCenturionCandidate(info);
 
+    protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
+    {
+        if (!TryReadCenturionBattery(handle, "probe", out var percent, out var charging)) return null;
+        return ("Logitech Centurion", percent, charging);
+    }
+
+    protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
+    {
+        if (!CanWrite(dev)) return null;
+        if (!TryReadCenturionBattery(dev.Handle, "poll", out var percent, out var charging))
+        {
+            ReportPollFailure(dev);
+            return null;
+        }
+        ReportPollAnswered(dev);
+        return (percent, charging);
+    }
+
+    protected override DeviceKind ResolveKind(string protocol)
+        => protocol == "Logitech Centurion" ? DeviceKind.Headset : base.ResolveKind(protocol);
+
+    protected override string BuildDisplayName(HidDeviceInfo info)
+        => string.IsNullOrWhiteSpace(info.Product) ? "Logitech PRO X 2 LIGHTSPEED" : info.Product;
+
+    private bool TryReadCenturionBattery(HidDeviceHandle handle, string purpose, out int percent, out ChargingState charging)
+    {
+        percent = 0;
+        charging = ChargingState.Unknown;
+        if (!WritesEnabled) return false;
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var request = CenturionCodec.BuildBatteryRequest();
+        if (!handle.WriteOutput(request, TimeSpan.FromMilliseconds(500)))
+        {
+            Log.Warn($"Logitech Centurion 电量查询无响应 purpose={purpose} stage=write elapsedMs={started.ElapsedMilliseconds}");
+            return false;
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            var response = handle.ReadInput(TimeSpan.FromMilliseconds(1500));
+            if (CenturionCodec.TryParseBatteryResponse(response, out percent, out charging))
+            {
+                Log.Info($"Logitech Centurion 电量查询 purpose={purpose} percent={percent} charging={charging} elapsedMs={started.ElapsedMilliseconds}");
+                return true;
+            }
+        }
+        Log.Warn($"Logitech Centurion 电量查询无响应 purpose={purpose} stage=read-timeout elapsedMs={started.ElapsedMilliseconds}");
+        return false;
+    }
+
+    public new IReadOnlyList<DeviceStatus> ReconcileRemovals(IReadOnlyList<HidDeviceInfo> availableDevices)
+        => base.ReconcileRemovals(availableDevices).Concat(ReconcileLegacyRemovals(availableDevices)).ToArray();
+
+    private IReadOnlyList<DeviceStatus> ReconcileLegacyRemovals(IReadOnlyList<HidDeviceInfo> availableDevices)
+    {
+        if (availableDevices.Count == 0) return Array.Empty<DeviceStatus>();
         var gone = new List<DeviceStatus>();
         foreach (var path in _sessions.Keys)
         {
             if (availableDevices.Any(d => d.DevicePath == path)) continue;
             if (!_sessions.TryRemove(path, out var session)) continue;
-
             StopListening(session);
             session.Io?.Dispose();
             foreach (var d in session.Devices.Values)
             {
                 d.Status.IsOnline = false;
-                // 不上报的话拔出后条目永远在线（基类同一处坑的注释）。
                 gone.Add(d.Status);
             }
             _claims?.Release(path, Name);
@@ -472,15 +527,14 @@ public sealed class LogitechPlugin : IBatteryPlugin
                     || !dev.Status.IsOnline;
         ApplyBattery(dev.Status, pct, chg);
         if (changed)
-            StatusPushed?.Invoke(dev.Status);
+            RaiseStatusPushed(dev.Status);
     }
 
-    public IReadOnlyList<DeviceStatus> Poll()
+    public new IReadOnlyList<DeviceStatus> Poll()
     {
-        // 写入许可关闭：不轮询（读数全靠写帧）。被动通知监听照常，即"降级为只被动监听"（safety.md §3 规则 2）。
-        if (!WritesEnabled) return Array.Empty<DeviceStatus>();
+        var updated = base.Poll().ToList();
+        if (!WritesEnabled) return updated;
 
-        var updated = new List<DeviceStatus>();
         foreach (var session in _sessions.Values)
         {
             if (session.Io == null) continue;
@@ -781,7 +835,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
         };
     }
 
-    public void Detach()
+    public override void Detach()
     {
         int released = _sessions.Count;
         foreach (var session in _sessions.Values)
@@ -790,6 +844,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
             session.Io?.Dispose();
         }
         _sessions.Clear();
-        if (released > 0) Log.Info($"罗技插件已卸载，释放 {released} 个会话");
+        base.Detach();
+        if (released > 0) Log.Info($"罗技 HID++ 插件已卸载，释放 {released} 个接收器会话");
     }
 }
