@@ -71,6 +71,7 @@ public class AppSettings
     /// 不再有独立的"写入许可"开关（CR-37）。会写帧的插件默认关闭（见各项注释）。</summary>
     public Dictionary<string, bool> PluginEnabled { get; set; } = new()
     {
+        ["Asus"] = false,      // Omni 配对身份与键盘电量需要查询，默认关闭
         ["Logitech"] = false,   // 罗技 HID++ 的发现与读数全靠写帧（自建闸门见 CR-01）
         ["Mchose"] = false,   // 迈从 dongle 协议未破解，探测写入可能干扰设备
         ["Rapoo"] = true,     // 雷柏走纯被动心跳读取，零写入，默认开启
@@ -90,7 +91,7 @@ public class AppSettings
         ["Cherry"] = false,   // CHERRY PIXIU75：64 字节块通道读块 0x1A，要写帧，默认关闭
         ["Pulsar"] = false,   // 派世 X2 V2：17 字节 STATUS/POWER 查询，要写帧，默认关闭
         ["Eweadn"] = false,   // 前行者 X87 键盘 / S9 鼠标：两套协议都要发查询帧，默认关闭（eweadn.md §1）
-        ["Razer"] = false,      // 雷蛇毒蝰 V4 Pro：经典 90 字节 feature 查询，要写帧，默认关闭（razer.md）
+        ["Razer"] = false,      // 雷蛇鼠标 Feature 与耳机 PA 电量查询需要发帧，默认关闭（razer.md）
         ["SonyInzone"] = false, // 索尼 INZONE H9 II：0xFF04 控制传输查询，要写帧，默认关闭（inzone-h9.md）
         ["Atk"] = false,        // ATK 8K 接收器（FF02 口 17B）：发 08 04…49 只读查询，要写帧，默认关闭（atk.md）
         ["HyperX"] = true,      // HyperX CF2（03F0:0AC1 FF90 口）：零写入，纯被动监听（hyperx-cf2.md）

@@ -97,6 +97,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// </summary>
     protected virtual bool ProbeWrites => true;
 
+    /// <summary>仅走 Feature 报告时不申请输入读写权限，避免被鼠标集合的系统保护拒绝。</summary>
+    protected virtual bool FeatureOnly(HidDeviceInfo info) => false;
+
     protected sealed class TrackedDevice
     {
         public required HidDeviceInfo Info;
@@ -152,6 +155,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// 故该阈值只挡异常、不挡正常放电。判定逻辑见 <see cref="BatteryReadingFilter"/>。
     /// </summary>
     protected virtual int MaxPlausibleStepPercent => 20;
+
+    /// <summary>默认过滤休眠占位值；协议确认 0/1 为真实电量时可放宽。</summary>
+    protected virtual int MinValidPercent(HidDeviceInfo info) => 2;
 
     /// <summary>
     /// 异常读数需持续这么久才最终采信（期间读数一直偏离才算数）：既挡住休眠瞬间的伪读数，
@@ -253,7 +259,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         HidDeviceHandle? handle = null;
         try
         {
-            handle = info.Open();
+            handle = FeatureOnly(info) ? info.OpenFeature() : info.Open();
             var probe = await ProbeAsync(handle).ConfigureAwait(false);
             if (probe == null)
             {
@@ -307,7 +313,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             var dev = new TrackedDevice
             {
                 Info = o.Info, Handle = o.Handle!, Status = status, Protocol = protocol,
-                Filter = CreateFilter(percent), FreshlyClaimed = true,
+                Filter = CreateFilter(percent, o.Info), FreshlyClaimed = true,
                 // 无读数但仍在线也要记下时刻，否则静音兜底永不触发。
                 LastPassiveAt = status.IsOnline ? DateTimeOffset.Now : default,
             };
@@ -698,9 +704,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     }
 
     /// <summary>新建一台设备的读数过滤器，并用探测读到的值建立初始基准。</summary>
-    private BatteryReadingFilter CreateFilter(int? probedPercent)
+    private BatteryReadingFilter CreateFilter(int? probedPercent, HidDeviceInfo info)
     {
-        var filter = new BatteryReadingFilter(MaxPlausibleStepPercent, AnomalyPersistWindow);
+        var filter = new BatteryReadingFilter(MaxPlausibleStepPercent, AnomalyPersistWindow, MinValidPercent(info));
         if (probedPercent.HasValue) filter.Seed(probedPercent.Value);
         return filter;
     }

@@ -37,7 +37,7 @@ Taskbar battery pill:
 - Stores battery history with 24-hour, 7-day, and 30-day statistics; records can be managed by device.
 - Can launch at startup.
 
-**Device plugin switches:** MCHOSE, Logitech, Razer and Sony INZONE plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
+**Device plugin switches:** ASUS, MCHOSE, Logitech, Razer and Sony INZONE plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
 
 ## Download and quick start
 
@@ -58,6 +58,9 @@ The table distinguishes devices verified on hardware from protocols implemented 
 
 | Device / protocol | Status |
 |---|---|
+| ASUS ROG Strix Scope II 96 Wireless / Omni (`0B05:1ACE`) | Contributor-verified at 95%, discharging; off by default. See [protocol notes](docs/hardware/asus-rog.md) |
+| Razer BlackShark V2 Pro (2023) (`1532:0555`) | Contributor-verified at 79%, discharging; shares the Razer switch. See [protocol notes](docs/hardware/razer-headset.md) |
+| Razer Viper V3 Pro SE wireless (`1532:00DF`) | Contributor-verified battery/charging queries; off by default. See [protocol notes](docs/hardware/razer-viper-se.md) |
 | MCHOSE G87 · 2.4 GHz `0x13` | Verified on the developer's device |
 | New-generation MCHOSE dongles · QHW (e.g. `3837:3033`) | Implemented; awaiting matching hardware validation |
 | MCHOSE G87 V2 / A7 V2 Pro · mouse V2 passive frames | Implemented, off by default; contributor hardware only, only G87 V1 retested here |

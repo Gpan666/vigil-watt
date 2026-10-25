@@ -26,6 +26,9 @@
 
 - [sources.md](hardware/sources.md)：协议、功能方案的依据、外部参考和验证范围；追溯来源先看这里。
 - [protocols.md](hardware/protocols.md)：设备协议帧、已验证行为和已证伪路径。
+- [asus-rog.md](hardware/asus-rog.md)：Scope II 96 / Omni 配对身份与电量。
+- [razer-headset.md](hardware/razer-headset.md)：BlackShark V2 Pro 2023 的 PA 协议与会话释放。
+- [razer-viper-se.md](hardware/razer-viper-se.md)：Viper V3 Pro SE 无线电量、Windows Feature 接口与验证范围。
 - [dualsense.md](hardware/dualsense.md)：DualSense 蓝牙电量的帧、CRC 和未复测边界。
 - [ganss.md](hardware/ganss.md)：GANSS GS3104T-Pro 的查询帧、认领判据风险与验证清单。
 - [akg.md](hardware/akg.md)：AKG N9 Hybrid 接收器查询、控制输入读取和验证边界。
