@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using VigilWatt.Core.Hid;
 using VigilWatt.Core.Models;
+using VigilWatt.Core.Utils;
 
 namespace VigilWatt.Core.Plugins.Atk;
 
@@ -15,7 +16,11 @@ public sealed class AtkPlugin : BatteryPluginBase
     public override string Name => "Atk";                 // AppSettings.PluginEnabled 的 key
     public override string DisplayName => "ATK";
     public override string DisplayNameEn => "ATK";
-    public override DeviceKind Kind => DeviceKind.Mouse;
+    /// <summary>一套开关管鼠标与键盘两条链路：具体图标由 <see cref="ResolveKind"/> 按链路给。</summary>
+    public override DeviceKind Kind => DeviceKind.Unknown;
+
+    protected override DeviceKind ResolveKind(string protocol)
+        => protocol == ProtocolVia ? DeviceKind.Keyboard : DeviceKind.Mouse;
 
     // 会写帧（发查询帧）→ 按社区适配指南"主动通信不进 15 秒常规发现节拍"，
     // 与 Betop / Ganss / Aula 一致保持默认 false；发现延迟走常规扫描周期。
@@ -65,9 +70,18 @@ public sealed class AtkPlugin : BatteryPluginBase
             kv.Value == group && IsReceiverPid(kv.Key) && _receiversInPlace.Contains(kv.Key));
     }
 
+    /// <summary>鼠标链路（op 帧）与键盘链路（VIA）各一套协议名。</summary>
+    private const string ProtocolMouse = "atk-v1";
+    private const string ProtocolVia = "atk-keyboard-via";
+
     /// <summary>认领接收器或有线本体，二者只认领其一（接收器优先），以免两条记录读数来跳。</summary>
     protected override bool IsCandidate(HidDeviceInfo info)
     {
+        // 键盘链路（VIA，page 0xFF60）：与鼠标同 VID，靠 usage page 分流，必须先判。
+        if (AtkViaCodec.IsSupportedInterface(info.VendorId, info.UsagePage,
+                info.InputReportLength, info.OutputReportLength, info.OutputReportId))
+            return true;
+
         if (info.VendorId != VendorId || info.UsagePage != UsagePageBattery)
             return false;
 
@@ -125,8 +139,18 @@ public sealed class AtkPlugin : BatteryPluginBase
             : base.IdFor(devicePath);   // 未登记的 PID → 保持上游默认（路径哈希）
     }
 
+    /// <summary>已验证型号表（键盘 A98 Pro 与 F1 ULTIMATE 2.0 两个 PID）。</summary>
+    private static readonly Dictionary<ushort, string> KnownModelByPid = new()
+    {
+        [0x1152] = "ATK A98 Pro",
+        [0x11D9] = "ATK F1 Ultimate 2.0",
+        [0x11E4] = "ATK F1 Ultimate 2.0",
+    };
+
     protected override string BuildDisplayName(HidDeviceInfo info)
     {
+        if (KnownModelByPid.TryGetValue(info.ProductId, out var known)) return known;
+
         // 型号名取"本体"（非接收器）上报的产品名，比接收器的通用名更准确；
         // 按归一组存，两只鼠标各记各的，不会互相覆盖。
         var group = DeviceGroups.TryGetValue(info.ProductId, out var g)
@@ -171,18 +195,38 @@ public sealed class AtkPlugin : BatteryPluginBase
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
     {
         // 接口预检查：写不进 17 字节 output 的接口直接排除（北通经验：长度从 caps 读）
+        // 键盘链路先判：同一接收器 VID 相同，反过来会把 VIA 查询帧发给鼠标。
+        if (AtkViaCodec.IsSupportedInterface(handle.Info.VendorId, handle.Info.UsagePage,
+                handle.Info.InputReportLength, handle.Info.OutputReportLength, handle.Info.OutputReportId))
+        {
+            var kb = QueryVia(handle);
+            return kb.HasValue
+                ? (ProtocolVia, kb.Value.Percent, kb.Value.Charging ? ChargingState.Charging : ChargingState.Discharging)
+                : null;
+        }
+
         if (handle.Info.OutputReportLength < AtkCodec.ReportLength) return null;
 
         if (!WriteQuery(handle, AtkCodec.BuildQuery())) return null;
         if (AtkCodec.TryParseReply(ReadBatteryResponse(handle, TimeSpan.FromSeconds(2))) is not { } r)
             return null;
-        return ("atk-v1", r.Percent, r.Charging);
+        return (ProtocolMouse, r.Percent, r.Charging);
     }
 
     protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
     {
         if (!CanWrite(dev))
             return null;                          // 未发帧（开关关闭/熔断中），不计失败
+
+        if (dev.Protocol == ProtocolVia)
+        {
+            var via = QueryVia(dev.Handle);
+            if (via.HasValue) ReportPollAnswered(dev);
+            else ReportPollFailure(dev);
+            return via.HasValue
+                ? (via.Value.Percent, via.Value.Charging ? ChargingState.Charging : ChargingState.Discharging)
+                : null;
+        }
 
         if (!WriteQuery(dev.Handle, AtkCodec.BuildQuery()))
         {
@@ -226,5 +270,31 @@ public sealed class AtkPlugin : BatteryPluginBase
         {
             CloseHandle(handle);
         }
+    }
+
+    /// <summary>键盘链路：发一条 VIA 查询，在 1 秒内等电量响应。</summary>
+    private static (int Percent, bool Charging)? QueryVia(HidDeviceHandle handle)
+    {
+        if (!IsWritesEnabled("Atk")) return null;
+        if (!handle.WriteOutput(AtkViaCodec.CreateQuery(handle.Info.OutputReportLength),
+                TimeSpan.FromMilliseconds(500)))
+            return null;
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+        while (DateTime.UtcNow < deadline)
+        {
+            var input = handle.ReadInput(TimeSpan.FromMilliseconds(300));
+            if (input == null) continue;
+            if (!AtkViaCodec.TryParse(input, out int percent, out bool charging))
+            {
+                if (Log.IsEnabled(LogLevel.Debug)) Log.Debug($"ATK 键盘忽略非电量响应: {Log.Hex(input)}");
+                continue;
+            }
+            Log.Info($"ATK 键盘 VIA 电量查询: {percent}% 充电={charging} 原始={Log.Hex(input)}");
+            return (percent, charging);
+        }
+        Log.Once(LogLevel.Debug, $"atk-kb-silent:{handle.Info.DevicePath}",
+            $"ATK 键盘查询无响应（多半在睡，恢复应答后会再记一条）: {handle.Info.DevicePath}");
+        return null;
     }
 }

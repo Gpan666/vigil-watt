@@ -51,7 +51,7 @@
 |---|---|---|---|
 | 雷蛇 | `PluginEnabled["Razer"]` | **false** | 保留 V4；新增 SE 鼠标 Feature 与 0555 耳机 PA。耳机每轮两次进入、一条查询、一次释放；未认领接口 15 秒发现，失败冷却 8 秒；已认领接口不重复探测。见 [razer.md](razer.md)、[razer-headset.md](razer-headset.md) |
 | 华硕 | `PluginEnabled["Asus"]` | **false** | Omni 只读配对身份核实与 Scope II 96 的 12/01 查询，见 [asus-rog.md](asus-rog.md) |
-| 迈从 | `PluginEnabled["Mchose"]` | **false** | dongle 协议未破解，探测写入可能干扰设备，故默认关；开插件即授权写帧。**一个开关管键盘、鼠标、V9 Pro 耳机、K7 鼠标、G3 V2（gmouse）五类设备**（品牌级，`AGENTS.md` §9） |
+| 迈从（含 X9 耳机） | `PluginEnabled["Mchose"]` | **false** | dongle 协议未破解，探测写入可能干扰设备，故默认关；开插件即授权写帧。**一个开关管键盘、鼠标、V9 Pro / X9 耳机、K7 鼠标、G3 V2（gmouse）六类设备**（品牌级，`AGENTS.md` §9） |
 | 北通 | `PluginEnabled["Betop"]` | **true** | 查询是官方客户端同款只读命令（cmd=0x5），风险低，故默认开 |
 | 罗技 | `PluginEnabled["Logitech"]` | **false** | Centurion 新路径继承 `BatteryPluginBase`，复用公共写入闸门、读数过滤和熔断退避；HID++ 历史路径保留 `HidppIO.WritesAllowed` 与专用会话处理 |
 | 雷柏 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`，零写入 |
@@ -69,7 +69,7 @@
 | 凌豹 | `PluginEnabled["Lingbao"]` | **false** | M5PRO Max 发官方驱动同款 `F7` feature 查询；K98 只发 `13 05 01` 会话帧，按型号码 `0x0212` 与 AULA 区分。都不进 15 秒发现，见 `lingbao.md` |
 | GANSS / 狼蛛 F108 | `PluginEnabled["Ganss"]` | **false** | 发固定查询帧才能读电量；两个品牌同指纹共用这一行开关；不进 15 秒发现，见 `ganss.md` §7 |
 | DualSense | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；只读蓝牙 HID `054C:0CE6` |
-| ATK | `PluginEnabled["Atk"]` | **false** | 只发一条固定查询帧 `08 04 …49`；该设备独占 `WriteFile` 不可用，回落 `HidD_SetOutputReport`（与 ATK HUB 共存实测无冲突） |
+| ATK | `PluginEnabled["Atk"]` | **false** | 鼠标发 17 字节 op 帧、键盘发 VIA `02 96 24`；两条链路共用一个开关，见 `atk.md` §5 §7 |
 | HyperX | 无（纯被动） | **true** | `WritesEnabled => false` + `ProbeWrites => false`；dongle 固件只实现 interrupt OUT，写帧一律 `ERROR_INVALID_FUNCTION`，只读 `FF90` 推送帧 |
 
 三条硬约束：

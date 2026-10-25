@@ -1,6 +1,6 @@
-# ATK / VXE 无线鼠标（接收器 VID_373B）
+# ATK / VXE 2.4G 电量（接收器 VID_373B）
 
-2.4G 无线鼠标电量接入。协议出处是公开逆向项目 [0x44oge-ATK](https://github.com/ReformedDoge/0x44oge-ATK)，本项目在其基础上做了真机复核与补强。
+鼠标走 16 字节 op 帧，键盘走 VIA，同一个 VID 下按 usage page 分流。鼠标部分：协议出处是公开逆向项目 [0x44oge-ATK](https://github.com/ReformedDoge/0x44oge-ATK)，本项目在其基础上做了真机复核与补强。
 
 - **设备**：ATK 烈空 F1 Pro Max、F1 V3 ULTIMATE+ 等同协议系列
 - **VID**：`0x373B`（十进制 14139）。⚠ **不是**容易误抄的 `0x375B`
@@ -293,3 +293,36 @@ Windows 在 USB 重新枚举 HID 设备时，旧句柄会失效、读帧失败�
 
 同系列鼠标支持蓝牙；切蓝牙连接后电量走标准 BLE GATT 电池服务 `0x180F` / `0x2A19`，
 由本应用的 BLE 模块读取，不经本插件。
+
+## 7. 键盘：VIA 读键盘值（page `0xFF60`）
+
+ATK 键盘（A98 Pro，`373B:1152`）走标准 VIA 之上加的一层 `customId` 扩展：
+
+```
+[0] 0x00（前导）  [1] 0x02（id_get_keyboard_value）  [2] 0x96（customId）  [3] 0x24（battery）
+```
+
+响应实测 `00 02 96 24 64 01 …`：
+
+| 偏移 | 含义 |
+|---|---|
+| `[0]` | 前导 `0x00`（不是 report ID，解析时跳过） |
+| `[1]` | `0x02` 命令回显 |
+| `[2]` | `0x96` customId |
+| `[3]` | `0x24` 电量键 |
+| `[4]` | **电量百分比**（样本 `0x64` = 100） |
+| `[5]` | 充电标志：非 0 = 充电中 |
+
+- 解析要求 `[1..3]` 三个命令字节全部对上，带/不带前导 `0x00` 两种偏移都试（`AtkViaCodec.TryParse`）。
+- 接口判据：同 VID、`usagePage 0xFF60`、进出等长且 ≥5 字节、report ID 为 `0x00` 或缺省。
+- **不要用 op 帧读键盘**：`0xFF60` 接口对 op 帧只回显请求，`data[0]` 恒为 `0x29`、校验和不重算，读出来必然是 41%——本项目踩过的坑。
+- 官方客户端在充电时不显示百分比（`power = 0 === batteryCharge ? batteryLevel : undefined`）；本插件照读数显示并标"充电中"。
+
+**型号表**（只按 PID 查，产品串不能当判据：`11E4` 的产品串是 `ATK F1 ULTIMATE 2.0`，不含 "mouse"）：
+
+| PID | 型号 | 链路 |
+|---|---|---|
+| `0x1152` | ATK A98 Pro | VIA 键盘 |
+| `0x11D9` / `0x11E4` | ATK F1 Ultimate 2.0 | op 帧鼠标 |
+
+其余 ATK PID 默认按鼠标算，型号名退回产品串。键盘与鼠标共用一个 `Atk` 开关（品牌级），设置页一行。

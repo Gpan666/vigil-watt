@@ -12,6 +12,7 @@
 | 迈从 MCHOSE | QHW 新一代 dongle | `3837:3033` | [mchose.md](mchose.md) | 已实现，备用 |
 | 迈从 MCHOSE | K7 V2 Ultra+ 鼠标 | `3837:1018` | [mchose.md](mchose.md) | 贡献者真机 |
 | 迈从 MCHOSE | V9 Pro 耳机 | `291D:385D` | [mchose-v9-pro.md](mchose-v9-pro.md) | 贡献者真机 |
+| 迈从 MCHOSE | X9 耳机 | `3837:6045` | [mchose-x9.md](mchose-x9.md) | 贡献者声明 |
 | 迈从 MCHOSE | G75 Pro 键盘（与 AULA 共用 `3554:FA09`） | `3554:FA09` | [mchose.md](mchose.md) §5 | 贡献者真机 36% |
 | 凌豹 LINGBAO | M5PRO Max 鼠标 | `3151:402D` | [lingbao.md](lingbao.md) | 贡献者真机 88%/95%，充电位已校准 |
 | 罗技 Logitech | Bolt C548 + MX Master 3S | `046D` | [logitech.md](logitech.md) | 本机验证 |
@@ -37,7 +38,8 @@
 | 派世 PULSAR | X2 V2 | `3554:F508` | [pulsar.md](pulsar.md) | 贡献者真机 |
 | 寸渊影弑 DARKRIM | SHADOW | `3654:6901` | [darkrim.md](darkrim.md) | 贡献者真机 |
 | 盖世小鸡 GameSir | G7 Pro CE | `3537` | [gamesir.md](gamesir.md) | 贡献者真机 |
-| ATK / VXE | 无线鼠标（F1 Pro Max / F1 V3 ULTIMATE+） | `373B:101B` / `101A` / `1303` | [atk.md](atk.md) | 本机验证 |
+| ATK / VXE | 无线鼠标（F1 Pro Max / F1 V3 ULTIMATE+ / F1 Ultimate 2.0） | `373B:101B` / `101A` / `1303` / `11D9` / `11E4` | [atk.md](atk.md) | 本机验证 |
+| ATK | A98 Pro 键盘（VIA） | `373B:1152` | [atk.md](atk.md) §7 | 贡献者声明 |
 | HyperX | Cloud Flight 2 飓风炫彩版 | `03F0:0AC1` | [hyperx-cf2.md](hyperx-cf2.md) | 本机验证 |
 | 雷蛇 RAZER | 毒蝰 V4 Pro（接收器 / 本体） | `1532:00E6` / `00E5` | [razer.md](razer.md) | 贡献者真机 100%；充电态 Unknown |
 | 雷蛇 RAZER | BlackShark V2 Pro (2023) / Viper V3 Pro SE | `1532:0555` / `00DF` | [razer-headset.md](razer-headset.md) · [razer-viper-se.md](razer-viper-se.md) | 贡献者真机 77% / 58% |

@@ -36,6 +36,9 @@ public sealed class MchosePlugin : BatteryPluginBase
     /// <summary>V9 Pro 耳机：64 字节固定查询帧（帧结构与判据见 <see cref="MchoseV9ProCodec"/>）。同品牌另一条链路，与键鼠判据完全独立。</summary>
     private const string ProtocolHeadsetV9 = "headset-v9";
 
+    /// <summary>X9 耳机：与 V9 Pro 同帧结构（判据见 <see cref="MchoseX9Codec"/>），VID 却与键鼠同号段。</summary>
+    private const string ProtocolHeadsetX9 = "headset-x9";
+
     private const byte QhwReportId = 0x4D;
     private const ushort CmdGetBattery = 0x0904;  // 2308
 
@@ -114,7 +117,7 @@ public sealed class MchosePlugin : BatteryPluginBase
             ProtocolMouseV2 => DeviceKind.Mouse,
             ProtocolMouseK7 => DeviceKind.Mouse,
             ProtocolGmouse => DeviceKind.Mouse,
-            ProtocolHeadsetV9 => DeviceKind.Headset,
+            ProtocolHeadsetV9 or ProtocolHeadsetX9 => DeviceKind.Headset,
             _ => DeviceKind.Keyboard,
         };
 
@@ -123,6 +126,8 @@ public sealed class MchosePlugin : BatteryPluginBase
     protected override string BuildDisplayName(HidDeviceInfo info)
     {
         // 耳机接收器是独立 VID/PID，只对应已验证的 V9 Pro；协议里没有型号回执，型号名只能写死
+        if (info.VendorId == MchoseX9Codec.VendorId && info.ProductId == MchoseX9Codec.ProductId)
+            return "迈从 X9";
         if (info.VendorId == MchoseV9ProCodec.VendorId && info.ProductId == MchoseV9ProCodec.ProductId)
             return "迈从 V9 Pro";
 
@@ -156,6 +161,8 @@ public sealed class MchosePlugin : BatteryPluginBase
     private const string LogKeyKbV1ModelUnknown = "kbv1-model-unknown"; // "共用指纹但型号不在迈从表，交给 AULA"
     private const string LogKeyMouseSilent = "mouse-silent";  // "鼠标探测没等到 E2 帧"
     private const string LogKeyMousePokeFail = "mouse-poke-fail"; // "触发帧写失败（接口无输出通道）"
+    private const string LogKeyX9Silent = "x9-silent"; // "X9 查询没等到电量响应"
+
     private const string LogKeyV9Silent = "v9-silent"; // "V9 Pro 查询没等到电量响应"
     private const string LogKeyK7NoPermit = "k7-no-permit"; // "没开写入许可，跳过 K7 主动查询"
     private const string LogKeyK7Asleep = "k7-asleep";      // "K7 只回 1 字节 0xFF，鼠标多半在睡"
@@ -190,6 +197,13 @@ public sealed class MchosePlugin : BatteryPluginBase
             var headset = TryHeadsetV9(handle);
             if (headset != null) KnownProtocolByPath[path] = ProtocolHeadsetV9;
             return headset;
+        }
+
+        if (kind == MchoseInterfaceKind.HeadsetX9)
+        {
+            var x9 = TryHeadsetX9(handle);
+            if (x9 != null) KnownProtocolByPath[path] = ProtocolHeadsetX9;
+            return x9;
         }
 
         // K7 的命令通道同样是 64 字节，但它说的是 0x4D 帧，不是 V2 世代那套 E2 状态帧——
@@ -256,6 +270,7 @@ public sealed class MchosePlugin : BatteryPluginBase
             ProtocolMouseK7 => TryMouseK7(handle),
             ProtocolGmouse => TryGmouse(handle),
             ProtocolHeadsetV9 => TryHeadsetV9(handle),
+            ProtocolHeadsetX9 => TryHeadsetX9(handle),
             _ => null,
         };
 
@@ -276,6 +291,7 @@ public sealed class MchosePlugin : BatteryPluginBase
             "qhw" => PollQhw(dev),
             ProtocolKeyboardV1 => PollKeyboardV1(dev),
             ProtocolHeadsetV9 => PollHeadsetV9(dev),
+            ProtocolHeadsetX9 => PollHeadsetX9(dev),
             ProtocolGmouse => PollGmouse(dev),
             _ => null,
         };
@@ -844,6 +860,48 @@ public sealed class MchosePlugin : BatteryPluginBase
 
         Log.Once(LogLevel.Debug, LogKey(handle, LogKeyV9Silent),
             $"迈从 V9 Pro 查询无响应（耳机多半在关机/休眠；恢复应答后会再记一条）: {handle.Info.DevicePath}");
+        return null;
+    }
+
+    /// <summary>X9 耳机探测：发一条固定查询帧（见 <see cref="MchoseX9Codec"/>），750 毫秒内解析响应。</summary>
+    private static (string Protocol, int? Percent, ChargingState Charging)? TryHeadsetX9(HidDeviceHandle handle)
+    {
+        if (!IsWritesEnabled(SettingsKey)) return null;
+        var read = QueryHeadsetX9(handle);
+        return read.HasValue ? (ProtocolHeadsetX9, read.Value.Percent, read.Value.Charging) : null;
+    }
+
+    /// <summary>X9 轮询：只发一条查询帧，失败记账仍由 <see cref="PollDevice"/> 负责。</summary>
+    private static (int? Percent, ChargingState Charging)? PollHeadsetX9(TrackedDevice dev)
+    {
+        if (!IsWritesEnabled(SettingsKey)) return null;
+        var read = QueryHeadsetX9(dev.Handle);
+        return read.HasValue ? (read.Value.Percent, read.Value.Charging) : null;
+    }
+
+    /// <summary>写 X9 查询帧并等响应；无应答只在状态变化时记一条 Debug。</summary>
+    private static (int Percent, ChargingState Charging)? QueryHeadsetX9(HidDeviceHandle handle)
+    {
+        if (!handle.WriteOutput(MchoseX9Codec.CreateQuery(), TimeSpan.FromMilliseconds(500)))
+            return null;
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(750);
+        while (DateTime.UtcNow < deadline)
+        {
+            var input = handle.ReadInput(TimeSpan.FromMilliseconds(300));
+            if (input == null) continue;
+            if (!MchoseX9Codec.TryParse(input, out int percent, out var charging))
+            {
+                if (Log.IsEnabled(LogLevel.Debug)) Log.Debug($"迈从 X9 忽略非电量响应: {Log.Hex(input)}");
+                continue;
+            }
+            Log.Once(LogLevel.Info, LogKey(handle, LogKeyX9Silent),
+                $"迈从 X9 电量查询: 电量={percent} 状态={charging} 原始={Log.Hex(input)}");
+            return (percent, charging);
+        }
+
+        Log.Once(LogLevel.Debug, LogKey(handle, LogKeyX9Silent),
+            $"迈从 X9 查询无响应（耳机多半在关机/休眠；恢复应答后会再记一条）: {handle.Info.DevicePath}");
         return null;
     }
 

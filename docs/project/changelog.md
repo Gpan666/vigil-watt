@@ -22,6 +22,7 @@
 - **合并 #29**：凌豹 K98（`3554:FA09`，`0x13` 会话/推送）并进同一凌豹插件，一个插件同时管 M5PRO Max 鼠标与 K98 键盘（`ResolveKind` 按协议给图标）。`3554:FA09` 因此变成三方共用，AULA 改为只认型号码 `0x0158`，K98 认 `0x0212`，迈从仍认密码表；AULA 不再把 K98 显示成 F99 Pro。见 `hardware/lingbao.md` §2、`aula.md` §1.1。
 - **合并 #34（只摘 VGN 与狼蛛 F108）**：接入 VGN 蜻蜓 F1 V5 Turbo+（kc2 配置帧 `0x06`，电量在 `payload[19]`）与 F2 大师+（y2 `BatteryLevel` 查询，`3554:FB56`）；插线后接收器与本体两条接口同时在场，按序列号只留带充电位那条（基类新增 `SkipPathsForThisPass` 钩子）。狼蛛 F108 Pro 与 GANSS GS3104T-Pro 在 HID 层完全同指纹，不另开插件，改为按产品名分品牌、共用一个开关。**未纳入**：K7（已由 #33 合入）、安装位置向导与 MSI、`publish-github.ps1`、展示层去重、贴片设备筛选、`tools/battcheck`。见 `hardware/vgn.md`、`ganss.md` §7。
 - **合并 #31（按品牌归并）**：狼蛛 G9 耳机（被动 `AB 47 4D 86` 状态帧）与 L9 Ultra 鼠标（`0x81` 查询）不再各占一行设置开关——L9 并进 `AulaPlugin`，G9 保留独立类但 `Name` 同为 `Aula`；设置页改为按 `Name` 去重，一个品牌只出一行（`AGENTS.md` §9）。VGN V98 Pro（`320F:5088`，`0x1A` 查询）并进 `VgnPlugin`，与蜻蜓共用一行。**未纳入**：PR 自带的三个型号级开关键（`AulaG9` / `AulaL9` / `Vgn` 各自独立）与把协议正文写进 `protocols.md` 的做法。插件级策略无法按型号分化的限制记 CR-102。见 `hardware/aula.md` §3 §4、`vgn.md` §3。
+- **合并 #28（只摘设备适配）**：ATK 补上键盘链路——A98 Pro（`373B:1152`）走标准 VIA 之上的 `02 96 24` 自定义通道，与鼠标 op 帧共用 `Atk` 开关、按 usage page 分流（`0xFF60` vs `0xFF02`）；顺带补 F1 Ultimate 2.0 两个 PID（`11D9`/`11E4`）的型号名。迈从补 X9 耳机（`3837:6045`，与 V9 Pro 同帧结构但 VID 与键鼠同号段，分类器排在鼠标分支之前）。**未纳入**：PR 对 `atk.md` 的整篇重写（会删掉 #48 的实测细节，改为在其后追加 §7）、对 `AtkCodec`/`AtkPlugin` 的平行实现（保留 main 的配对组模型，只并入 VIA 与 PID 表）、以及一批陈旧基线的回退。见 `hardware/atk.md` §7、`mchose-x9.md`。
 
 ## 2026-10-24
 
