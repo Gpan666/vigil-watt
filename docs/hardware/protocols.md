@@ -24,6 +24,7 @@
 | AULA | F99 Pro | `3554:FA09` | [aula.md](aula.md) | 贡献者真机 |
 | AULA | HERO 68 Air（2.4G） | `372E:106C` + UUID `12000000000A` | [aula.md](aula.md) §2 | 贡献者真机 10% 放电/充电 |
 | AKG | N9 Hybrid（接收器） | `0ECB:20D9` | [akg.md](akg.md) | 贡献者真机 50%；充电状态未知 |
+| 凌豹 LINGBAO | K98 键盘（与 AULA 共用 `3554:FA09`） | `3554:FA09` | [lingbao.md](lingbao.md) §2 | 贡献者真机 100% |
 | 索尼 | DualSense 蓝牙 | `054C:0CE6` | [dualsense.md](dualsense.md) | 贡献者真机 |
 | GANSS | GS3104T-Pro | `05AC:024F` | [ganss.md](ganss.md) | 贡献者真机 |
 | CHERRY | PIXIU75（2.4G / 有线） | `046A:01E4` / `01E2` | [cherry.md](cherry.md) | 贡献者真机 |
@@ -43,8 +44,8 @@
 ## 2. 共用号段的陷阱（认领前必读）
 
 - **`3554` 是 Compx 共用号段**：AULA F99 Pro（`FA09`）、派世 X2 V2（`F508`）、VGN 蜻蜓 F2（`FB56`/`FB57`）都在这里。
-  按 VID 猜协议族一定错，判据必须带 usage + 报文长度；`3554:FA09` 上还叠了 AULA F99 Pro 与迈从 G75，两者指纹完全一致，
-  只能靠会话 ACK 里的型号码分流（[aula.md](aula.md) §1.1、[mchose.md](mchose.md) §5）。
+  按 VID 猜协议族一定错，判据必须带 usage + 报文长度；`3554:FA09` 上还叠了 AULA F99 Pro、凌豹 K98 与迈从 G75，三者指纹完全一致，
+  只能靠会话 ACK 里的型号码分流（[aula.md](aula.md) §1.1、[lingbao.md](lingbao.md) §2、[mchose.md](mchose.md) §5）。
 - **`05AC:024F` 是借用苹果号段**：GANSS GS3104T-Pro 与狼蛛 F108 Pro 的五条接口判据逐条一致，HID 层分不出品牌，
   唯一可用证据是产品名。
 - **`1D57:FA65` 被两个品牌共用**：英菲克 ZHEN 读被动 `0x03` 帧，DELUX M900 Pro 读 `0x000A`，靠长度与块结构区分。

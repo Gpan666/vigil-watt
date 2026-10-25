@@ -72,10 +72,12 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | Sony INZONE H9 II (receiver) · `0xFF04` control-transfer query | Verified on the developer's device; off by default, writes reports |
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
 | Inphic ZHEN · passive report `0x03` | Verified on hardware |
-| HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |
+| HECATE G5M Pro · passive report `0x04` + active query `04 00 00 1A` | Implemented, off by default; writes frames. Contributor hardware only |
 | AULA F99 Pro · `0x13` session/push | Implemented, off by default; contributor hardware only |
 | AULA HERO 68 Air · Bytech queries over 8K receiver | Off by default; contributor verified 10% discharging/charging; shares the AULA switch |
 | AKG N9 Hybrid · RACE battery query over USB receiver | Off by default; contributor verified 50%; charging state unknown |
+| LINGBAO M5PRO Max (`3151:402D`) · vendor-driver `F7` status query | Implemented, off by default; writes frames. Contributor verified 88%/95%, not retested here |
+| LINGBAO K98 (`3554:FA09`) · `0x13` session/push | Implemented, off by default; shares VID/PID with AULA, split by session model code `0x0212`. Contributor hardware only |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
 | GANSS GS3104T-Pro · 33-byte query frame | Implemented, off by default; writes frames. Contributor hardware only |

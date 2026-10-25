@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using VigilWatt.Core.Hid;
 using VigilWatt.Core.Models;
+using VigilWatt.Core.Plugins.Compx;
 using VigilWatt.Core.Plugins.Mchose;
 using VigilWatt.Core.Utils;
 
@@ -9,12 +10,15 @@ namespace VigilWatt.Core.Plugins.Aula;
 /// <summary>
 /// 功 能： 狼蛛 F99 Pro 与 HERO 68 Air 2.4G 键盘电量插件。
 /// 2026/10/19 15:10:00 xliu；2026/10/23 20:05:00 30149 扩展 HERO 68 Air。
-/// 协议与验证范围见 docs/hardware/aula.md；与迈从 G75 共用 3554:FA09，靠会话 ACK 型号分流（mchose.md §5）。
+/// 协议与验证范围见 docs/hardware/aula.md；与迈从 G75 / 凌豹 K98 共用 3554:FA09，靠会话 ACK 型号分流（§1.1）。
 /// </summary>
 public sealed class AulaPlugin : BatteryPluginBase
 {
     public const ushort AulaVid = 0x3554;
     public const ushort F99ProPid = 0xFA09;
+
+    /// <summary>F99 Pro 会话 ACK 的型号码；凌豹 K98 是 0x0212，靠它避免抢错同 VID/PID 的接口。</summary>
+    public const ushort F99ProModelCode = 0x0158;
 
     private const string SettingsKey = "Aula";
     private readonly ConditionalWeakTable<HidDeviceHandle, AulaHero68Transport> _heroTransports = new();
@@ -57,9 +61,7 @@ public sealed class AulaPlugin : BatteryPluginBase
     /// <summary>探测 = 开一次会话，等设备回 0A 电量推送。</summary>
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
     {
-        var read = TryRead(handle, out bool isMchose);
-        // 3554:FA09 被迈从 G75 共用：ACK 里的型号密码落在迈从表里就不是本插件该认的设备（mchose.md §5）
-        if (isMchose) return null;
+        var read = TryRead(handle);
         return read is { } value ? ("aula-v1", value.Percent, value.Charging) : null;
     }
 
@@ -70,16 +72,15 @@ public sealed class AulaPlugin : BatteryPluginBase
         var read = dev.Protocol == "aula-hero68-air"
             ? _heroTransports.GetValue(dev.Handle, h => new AulaHero68Transport(h, () => WritesEnabled))
                 .ReadBatteryAsync().GetAwaiter().GetResult()
-            : TryRead(dev.Handle, out _);
+            : TryRead(dev.Handle);
         if (read.HasValue) ReportPollAnswered(dev);
         else ReportPollFailure(dev);
         return read;
     }
 
-    /// <summary>发开会话帧，等 0A 推送或 4A 响应；拿不到返回 null。ACK 里的型号属于迈从时置 <paramref name="isMchose"/>。</summary>
-    private static (int? Percent, ChargingState Charging)? TryRead(HidDeviceHandle handle, out bool isMchose)
+    /// <summary>发开会话帧，等 0A 推送或 4A 响应；拿不到返回 null。ACK 型号不是 F99 Pro 就让位。</summary>
+    private static (int? Percent, ChargingState Charging)? TryRead(HidDeviceHandle handle)
     {
-        isMchose = false;
         if (handle.Info.OutputReportLength < MchoseV1Codec.FrameLength) return null;
         if (!handle.WriteOutput(MchoseV1Codec.BuildFrame(MchoseV1Codec.SessionCmd, 0x01),
                 TimeSpan.FromMilliseconds(500)))
@@ -91,12 +92,16 @@ public sealed class AulaPlugin : BatteryPluginBase
             var input = handle.ReadInput(TimeSpan.FromMilliseconds(300));
             if (input == null) continue;
 
-            if (MchoseMouseCodec.ModelFromSessionAck(input) != null)
+            // 3554:FA09 上还叠着迈从 G75 与凌豹 K98：型号不是 F99 Pro 就让位（mchose.md §5、lingbao.md §2）
+            if (CompxSessionAck.TryGetModelCode(input, out ushort model))
             {
-                isMchose = true;
-                Log.Once(LogLevel.Info, $"{handle.Info.DevicePath}|mchose-model",
-                    $"AULA 跳过：会话 ACK 是迈从型号，接口归迈从插件 原始={Log.Hex(input)}");
-                return null;
+                if (model != F99ProModelCode)
+                {
+                    Log.Once(LogLevel.Info, $"{handle.Info.DevicePath}|not-f99",
+                        $"AULA 跳过：会话 ACK 型号=0x{model:X4}，不是 F99 Pro 原始={Log.Hex(input)}");
+                    return null;
+                }
+                continue;
             }
 
             var push = MchoseV1Codec.ParsePush(input);
