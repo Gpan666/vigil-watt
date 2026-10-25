@@ -46,6 +46,7 @@
 | 设备读不到电量、读数异常、dongle 无响应或离线误判 | [hardware/protocols.md](hardware/protocols.md) · [hardware/debugging.md](hardware/debugging.md) |
 | 蓝牙设备未出现、类型识别错误或电量为空 | [project/code-flow.md](project/code-flow.md) · [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) |
 | 托盘、小组件、任务栏贴片显示或交互异常 | [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) |
+| 设备列表某行变空白/变黑、点刷新后进程直接退出 | [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) §22 |
 | 贴片选错屏、换显示模式后贴片不见、设置页屏幕名不对 | [dev/monitor-identity.md](dev/monitor-identity.md) |
 | 准备向设备发送数据 | 先读 [hardware/safety.md](hardware/safety.md)，再查 [hardware/sources.md](hardware/sources.md) |
 | 需要查看未修问题 | [reviews/BACKLOG.md](reviews/BACKLOG.md) |

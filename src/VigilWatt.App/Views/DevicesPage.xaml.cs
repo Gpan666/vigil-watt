@@ -84,10 +84,24 @@ public sealed partial class DevicesPage : Page
 
     private void Refresh()
     {
+        try
+        {
+            RefreshCore();
+        }
+        catch (Exception ex)
+        {
+            // 列表刷新失败不能带走进程：异常从 ObservableCollection 的通知回调里逸出时，
+            // App.UnhandledException 的 e.Handled 拦不住，进程会直接 fail-fast（runtime-pitfalls.md §22）
+            Log.Error("设备列表刷新失败", ex);
+        }
+    }
+
+    private void RefreshCore()
+    {
         var devices = App.Services.Manager.Devices;
         var settings = App.Services.Settings;
 
-        // 按 Id 取旧行，内容指纹相同就整行复用（连 Icon 元素一起），避免静止设备跟着重建
+        // 按 Id 取旧行，内容指纹相同就整行复用，避免静止设备跟着重建
         var existing = new Dictionary<string, DeviceRowModel>(_rows.Count);
         foreach (var row in _rows) existing[row.Id] = row;
 

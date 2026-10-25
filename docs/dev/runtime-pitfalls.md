@@ -928,3 +928,41 @@ X9 实际 09:47:04 却显示 01:47:04；离线的鼠标实际 10-24 01:13:16 却
 **教训**：从库里读出来的时间戳，要么读的时候就把时区定死，要么显示的时候显式 `.ToLocalTime()`，
 **别把 DateTimeOffset 的原始偏移直接丢给格式化器**。写单测时也要断言 `.Offset`，
 只断言时间值会漏掉这类偏移错误。
+
+## 22. 设备列表行把图标元素存进模型：行一移位就 `0xc000027b`（2026-10-25 实修）
+
+**症状**：关掉任一插件 → 回主界面，被移除的那一行变成空白/深色块，界面像卡住；再点「刷新」进程直接退出。
+日志只有一条 `XAML 未处理异常`：
+
+```
+System.ArgumentException: Value does not fall within the expected range.
+  at ContentPresenter.set_Content
+  at DevicesPage_obj7_Bindings.Update_Icon
+  at DevicesPage.Refresh() ... DevicesPage.xaml.cs:105
+  at DevicesPage.OnPageLoaded(...)
+```
+
+事件查看器同一时刻：`Application Error`，`0xc000027b`，模块 `CoreMessagingXP.dll`。
+
+**根因**：`DeviceRowModel.Icon` 存的是**画好的 UIElement**（`DeviceIconFactory.Scaled` 的 Viewbox），
+XAML 用 `Content="{x:Bind Icon}"` 塞进 `ContentPresenter`。而 `Refresh()` 按 `Signature` 复用整行对象
+（连 Icon 一起）。复用本身没问题——**问题在行对象会换位置**：删掉一行后后面的索引整体前移，
+`_rows[i] = fresh[i]` 触发 Replace，ListView 为新位置重建容器，把**同一个** Viewbox 交给第二个
+`ContentPresenter`。一个 UIElement 只能有一个父级，WinRT 抛 `E_INVALIDARG`。
+
+**为什么点刷新才崩**：第一次异常被 `App.UnhandledException` 吞掉（日志记「第 1 次」），但那一行
+已经渲染不出来（用户看到的"变黑"）、布局也挂了；再点刷新重走一次 `Refresh()`，第二次异常跨 ABI
+逸出，`e.Handled = true` 救不回来，进程 fail-fast。`0xc000027b` 是 stowed exception 的通用退出码，
+不是内存越界——别往"内存坏了"的方向查。
+
+**为什么必现**：页面 `NavigationCacheMode = Required`，`Unloaded` 只解绑事件、不清 `_rows`，
+旧行连同 Icon 一直活着。`DevicesChanged` 在设置页期间发出时页面已 Unloaded、收不到，
+回主界面 `Loaded` 才补刷新——删行与刷新之间的空档正好落在这一步。
+
+**修法**：模型不再持有视觉元素。`DeviceRowModel` 只存 `IconKind` + `IconColor`，模板里换成
+`Controls/DeviceIconPresenter`（`ContentControl` 子类，两个 DP，值变了才重画），每个行容器各持一个
+自己的元素。另外给 `Refresh()` 包了 `try/catch` + `Log.Error`：UI 更新失败该留痕、不该带走进程（R5）。
+
+**教训**：**DataTemplate 里不要绑共享的 UIElement**。行模型只放值，元素交给模板层按值现画；
+只要模型能活过容器重建，就不能在里面存 `FrameworkElement`。同理适用于任何 ItemsSource 增量更新
+（Replace / Move / Insert 都会重建容器）。

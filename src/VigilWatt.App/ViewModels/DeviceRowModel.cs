@@ -16,8 +16,11 @@ public sealed class DeviceRowModel
 {
     public string Id { get; init; } = "";
 
-    /// <summary>行首设备图标：矢量造型，与小组件/任务栏贴片同一套（<see cref="DeviceIconFactory"/>），不再用字体图标。</summary>
-    public UIElement? Icon { get; init; }
+    /// <summary>行首图标只存值，由模板里的 <see cref="Controls.DeviceIconPresenter"/> 现画：
+    /// 存画好的元素会让复用行把它带进第二个容器（docs/dev/runtime-pitfalls.md §22）。</summary>
+    public DeviceKind IconKind { get; init; }
+
+    public Color IconColor { get; init; }
 
     public string Name { get; init; } = "";
     public string PercentText { get; init; } = "--%";
@@ -42,7 +45,7 @@ public sealed class DeviceRowModel
     /// 注意 x:Bind 绑 null 会压掉样式默认前景导致文字不可见，此属性必须非空。</summary>
     public Brush PercentBrush { get; init; } = UiPalette.Brush(UiPalette.Offline);
 
-    /// <summary>显示内容的指纹（不含 Icon 元素）：刷新时指纹相同就整行复用，避免每分钟轮询把列表重建一遍。</summary>
+    /// <summary>显示内容的指纹：刷新时指纹相同就整行复用，避免每分钟轮询把列表重建一遍。</summary>
     public string Signature { get; init; } = "";
 
     public static DeviceRowModel From(
@@ -87,7 +90,8 @@ public sealed class DeviceRowModel
         {
             Id = d.Id,
             Signature = signature,
-            Icon = DeviceIconFactory.Scaled(kind, iconColor, 22),
+            IconKind = kind,
+            IconColor = iconColor,
             Name = d.DisplayName,
             PercentText = percentText,
             Progress = percent ?? 0,
