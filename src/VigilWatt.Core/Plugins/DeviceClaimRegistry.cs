@@ -21,6 +21,10 @@ public sealed class DeviceClaimRegistry
     public bool IsClaimedBy(string devicePath, string pluginName)
         => _ownerByPath.TryGetValue(devicePath, out var owner) && owner == pluginName;
 
+    /// <summary>查某接口当前归谁。null = 没有插件认领（采集页据此标「未适配」）。</summary>
+    public string? OwnerOf(string devicePath)
+        => _ownerByPath.TryGetValue(devicePath, out var owner) ? owner : null;
+
     /// <summary>释放接口（仅当持有者是该插件时生效）。</summary>
     public void Release(string devicePath, string pluginName)
     {

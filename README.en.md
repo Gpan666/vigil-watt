@@ -37,7 +37,7 @@ Taskbar battery pill:
 - Stores battery history with 24-hour, 7-day, and 30-day statistics; records can be managed by device.
 - Can launch at startup.
 
-**Device plugin switches:** MCHOSE and Logitech plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
+**Device plugin switches:** MCHOSE, Logitech, Razer and Sony INZONE plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
 
 ## Download and quick start
 
@@ -62,12 +62,17 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | New-generation MCHOSE dongles · QHW (e.g. `3837:3033`) | Implemented; awaiting matching hardware validation |
 | MCHOSE G87 V2 / A7 V2 Pro · mouse V2 passive frames | Implemented, off by default; contributor hardware only, only G87 V1 retested here |
 | MCHOSE K7 V2 Ultra+ · `0x0900` query + `0x0600` events | Contributor-verified on real hardware; shares the MCHOSE plugin switch |
+| MCHOSE G3 V2 · Gmouse active query (`3837:4245`) | Contributor-verified on real hardware; shares the MCHOSE plugin switch |
 | Betop T9 · passive vendor-interface stream | Verified on hardware |
 | Logitech Bolt receiver (C548 + MX Master 3S) · HID++ | Verified on hardware |
+| Razer Viper V4 Pro (receiver) · classic 90-byte feature protocol | Verified on the developer's device; off by default, writes reports |
+| Sony INZONE H9 II (receiver) · `0xFF04` control-transfer query | Verified on the developer's device; off by default, writes reports |
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
 | Inphic ZHEN · passive report `0x03` | Verified on hardware |
 | HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |
 | AULA F99 Pro · `0x13` session/push | Implemented, off by default; contributor hardware only |
+| AULA HERO 68 Air · Bytech queries over 8K receiver | Off by default; contributor verified 10% discharging/charging; shares the AULA switch |
+| AKG N9 Hybrid · RACE battery query over USB receiver | Off by default; contributor verified 50%; charging state unknown |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
 | GANSS GS3104T-Pro · 33-byte query frame | Implemented, off by default; writes frames. Contributor hardware only |
@@ -76,6 +81,8 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | Pulsar X2 V2 · 17-byte STATUS/POWER | Implemented, off by default; writes frames. Contributor hardware only |
 | AJAZZ AK870 · feature `F7` status query | Implemented, off by default; writes frames. Contributor hardware only |
 | Thunderobot ML903 NearLink Se · `0xA0` device-info TLV | Implemented, off by default; writes frames. Contributor hardware only |
+| ATK / VXE wireless mouse · 17-byte query frame | Implemented, off by default; writes frames. Verified on F1 Pro Max and F1 V3 ULTIMATE+ |
+| HyperX Cloud Flight 2 · passive 2.4 GHz push frames | Implemented, on by default; zero writes. Verified on a CF2 |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
 

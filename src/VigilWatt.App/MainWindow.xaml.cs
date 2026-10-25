@@ -163,6 +163,7 @@ public sealed partial class MainWindow : Window
             "devices" => typeof(DevicesPage),
             "stats" => typeof(StatsPage),
             "history" => typeof(HistoryPage),
+            "capture" => typeof(CapturePage),
             "settings" => typeof(SettingsPage),
             "about" => typeof(AboutPage),
             _ => typeof(DevicesPage),

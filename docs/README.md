@@ -6,6 +6,7 @@
 
 - [handoff.md](project/handoff.md)：当前状态、设备验证情况和待办；新会话先读。
 - [architecture.md](project/architecture.md)：模块职责、关键设计和数据存储。
+- [capture.md](project/capture.md)：设备诊断（USB/HID 采集）的流程、能力边界、包格式与验证记录。
 - [code-flow.md](project/code-flow.md)：启动、设备发现、轮询和 UI 更新流程。
 - [experience.md](project/experience.md)：项目经验与后续规划；不维护待办。
 - [changelog.md](project/changelog.md)：按日期记录重要改动及原因。
@@ -27,6 +28,7 @@
 - [protocols.md](hardware/protocols.md)：设备协议帧、已验证行为和已证伪路径。
 - [dualsense.md](hardware/dualsense.md)：DualSense 蓝牙电量的帧、CRC 和未复测边界。
 - [ganss.md](hardware/ganss.md)：GANSS GS3104T-Pro 的查询帧、认领判据风险与验证清单。
+- [akg.md](hardware/akg.md)：AKG N9 Hybrid 接收器查询、控制输入读取和验证边界。
 - [mchose-v9-pro.md](hardware/mchose-v9-pro.md)：MCHOSE V9 Pro 耳机的查询帧与未复测边界。
 - [safety.md](hardware/safety.md)：硬件写入规则与事故复盘；任何写入改动前必读。
 - [debugging.md](hardware/debugging.md)：官方软件抓包、HID 观测和协议验证步骤。
@@ -45,9 +47,11 @@
 | 设备读不到电量、读数异常、dongle 无响应或离线误判 | [hardware/protocols.md](hardware/protocols.md) · [hardware/debugging.md](hardware/debugging.md) |
 | 蓝牙设备未出现、类型识别错误或电量为空 | [project/code-flow.md](project/code-flow.md) · [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) |
 | 托盘、小组件、任务栏贴片显示或交互异常 | [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) |
+| 设备列表某行变空白/变黑、点刷新后进程直接退出 | [dev/runtime-pitfalls.md](dev/runtime-pitfalls.md) §22 |
 | 贴片选错屏、换显示模式后贴片不见、设置页屏幕名不对 | [dev/monitor-identity.md](dev/monitor-identity.md) |
 | 准备向设备发送数据 | 先读 [hardware/safety.md](hardware/safety.md)，再查 [hardware/sources.md](hardware/sources.md) |
 | 需要查看未修问题 | [reviews/BACKLOG.md](reviews/BACKLOG.md) |
+| 设备没被识别、想采证据给维护者 | [project/capture.md](project/capture.md) |
 
 ## 调试脚本
 

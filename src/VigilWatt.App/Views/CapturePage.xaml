@@ -1,0 +1,367 @@
+<Page
+    x:Class="VigilWatt.App.Views.CapturePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:v="using:VigilWatt.App.ViewModels">
+
+    <Grid x:Name="RootGrid" RowDefinitions="Auto,Auto,*" Padding="20,16" RowSpacing="12" SizeChanged="RootGrid_SizeChanged">
+
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="设备诊断" Style="{StaticResource AppPageTitleStyle}" />
+                <TextBlock x:Name="SubtitleText" Text="为设备采集原始证据：选设备 → 选接口 → 预检 → 采集 → 出报告"
+                           Style="{StaticResource AppPageSubtitleStyle}" TextWrapping="Wrap" />
+                <Border x:Name="WindowHint" Visibility="Collapsed" HorizontalAlignment="Left"
+                        CornerRadius="6" Padding="10,5" Margin="0,4,0,0">
+                    <TextBlock x:Name="WindowHintText" TextWrapping="Wrap" FontSize="12" FontWeight="SemiBold"
+                               Text="窗口偏窄：最大化窗口后，步骤条和「引导 / 记录」两列会更清楚。" />
+                </Border>
+            </StackPanel>
+            <Button x:Name="RefreshButton" Grid.Column="1" Click="Refresh_Click" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                    <TextBlock Text="刷新设备" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <InfoBar x:Name="MessageBar" Grid.Row="1" IsOpen="False" IsClosable="True" />
+
+        <Grid Grid.Row="2">
+
+            <!-- ========== 空闲态：选设备 / 选接口与预检（两栏）/ 结果 / 历史 ========== -->
+            <ScrollViewer x:Name="IdlePanel" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled">
+                <StackPanel Spacing="12" Padding="0,0,12,24">
+
+                    <Border Style="{StaticResource AppKpiCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="1 · 选择任务与设备" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <RadioButton x:Name="TaskUnknown" GroupName="CaptureTask" IsChecked="True"
+                                             Content="未知设备调查（找新协议）" Checked="Task_Checked" />
+                                <RadioButton x:Name="TaskSupported" GroupName="CaptureTask"
+                                             Content="已支持设备诊断（排查读数）" Checked="Task_Checked" />
+                            </StackPanel>
+                            <TextBlock x:Name="TaskHint" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                       Text="列出系统里全部 HID 设备，未适配的排在前面。采集方式固定为 USB/HID，程序不会自动改用蓝牙或厂商软件。" />
+
+                            <ListView x:Name="DeviceList" SelectionMode="Single"
+                                      ScrollViewer.VerticalScrollMode="Disabled"
+                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                      SelectionChanged="DeviceList_SelectionChanged">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="v:CaptureDeviceRow">
+                                        <StackPanel Spacing="1" Padding="0,4">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{x:Bind Status}" Style="{StaticResource AppCardFootnoteStyle}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource AppCardFootnoteStyle}"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock x:Name="DeviceHint" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                       Text="点「刷新设备」列出当前能枚举到的 HID 设备。" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource AppKpiCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="2 · 选择接口与预检" FontWeight="SemiBold" />
+                            <!-- 左接口右预检：预检在选中接口时自动跑，这里的宽度比例与运行态两列一致 -->
+                            <Grid x:Name="InterfaceProbeGrid" ColumnDefinitions="1*,1.2*" ColumnSpacing="16"
+                                  RowSpacing="12" SizeChanged="InterfaceProbeGrid_SizeChanged">
+                                <StackPanel x:Name="InterfaceColumn" Grid.Column="0" Spacing="8">
+                                    <ListView x:Name="InterfaceList" SelectionMode="Single" IsEnabled="False"
+                                              ScrollViewer.VerticalScrollMode="Disabled"
+                                              ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                              SelectionChanged="InterfaceList_SelectionChanged">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="v:CaptureInterfaceRow">
+                                                <StackPanel Spacing="1" Padding="0,4">
+                                                    <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource AppCardFootnoteStyle}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                    <TextBlock x:Name="InterfaceHint" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                               Text="一台设备通常有多个接口。只有「有输入通道」的接口才可能被动监听到报文。" />
+                                </StackPanel>
+
+                                <StackPanel x:Name="ProbeColumn" Grid.Column="1" Spacing="8">
+                                    <TextBlock x:Name="CapabilitySummary" Style="{StaticResource AppCardFootnoteStyle}"
+                                               TextWrapping="Wrap" Text="选中接口后自动预检，这里显示「几项可用、几项要处理」，默认只列需要你注意的项。" />
+                                    <CheckBox x:Name="ShowAllCapsCheck" Content="显示全部能力项（含可用）" IsEnabled="False"
+                                              Checked="ShowAllCaps_Changed" Unchecked="ShowAllCaps_Changed" />
+                                    <ListView x:Name="CapabilityList" SelectionMode="None"
+                                              ScrollViewer.VerticalScrollMode="Disabled"
+                                              ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="v:CaptureCapabilityRow">
+                                                <StackPanel Spacing="1" Padding="0,4">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{x:Bind Status}" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{x:Bind Detail}" Style="{StaticResource AppCardFootnoteStyle}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <CheckBox x:Name="FeatureCheck" Content="读取 Feature report（只读）" IsEnabled="False"
+                                                  Checked="FeatureCheck_Changed" Unchecked="FeatureCheck_Changed" />
+                                        <ComboBox x:Name="FeatureIdBox" MinWidth="120" IsEnabled="False"
+                                                  Header="report ID" PlaceholderText="先预检" />
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                               Text="Feature 读取会向设备发 GET_REPORT（只读，不改变设备状态）。report ID 只能从该接口 caps 里真实存在的 ID 中选择；不勾选就只被动监听输入报告。" />
+
+                                    <CheckBox x:Name="AllowSendCheck" Content="允许向设备发送（手动发帧，实验性）"
+                                              IsEnabled="False" />
+                                    <TextBlock x:Name="AllowSendHint" Style="{StaticResource AppCardFootnoteStyle}"
+                                               TextWrapping="Wrap"
+                                               Text="勾选后本会话的句柄会申请写权限，采集页出现「手动发帧」。只有明确知道要发什么时才用——发错帧可能让设备进 bootloader。" />
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button x:Name="ProbeButton" Content="重新预检" Click="Probe_Click" IsEnabled="False" />
+                                        <Button x:Name="StartButton" Content="开始采集" Click="Start_Click" IsEnabled="False"
+                                                Style="{StaticResource AccentButtonStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="ResultCard" Style="{StaticResource AppKpiCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="3 · 结果与导出" FontWeight="SemiBold" />
+                            <TextBlock x:Name="ResultText" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                       Text="停止采集后这里会显示摘要，并生成 report.html 与 vigilwatt-capture.zip。放弃采集则不出报告，记录一起删除。" />
+                            <!-- 整场没变的分组要在结果卡上直说：用户会看这里，报告里的结论他不一定翻 -->
+                            <TextBlock x:Name="ResultWarn" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                       Visibility="Collapsed" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="OpenReportButton" Content="打开报告" Click="OpenReport_Click" IsEnabled="False" />
+                                <Button x:Name="OpenFolderButton" Content="打开所在文件夹" Click="OpenFolder_Click" IsEnabled="False" />
+                                <Button x:Name="SaveAsButton" Content="另存为…" Click="SaveAs_Click" IsEnabled="False" />
+                                <Button x:Name="CopySummaryButton" Content="复制调查摘要" Click="CopySummary_Click" IsEnabled="False" />
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                       Text="全部数据只在本机。程序不会上传诊断包，也不需要登录。" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource AppKpiCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="已保存的采集" FontWeight="SemiBold" />
+                            <ListView x:Name="HistoryList" SelectionMode="Single"
+                                      IsItemClickEnabled="True" ItemClick="HistoryList_ItemClick"
+                                      ScrollViewer.VerticalScrollMode="Disabled"
+                                      ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="v:CaptureHistoryRow">
+                                        <StackPanel Spacing="1" Padding="0,4">
+                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource AppCardFootnoteStyle}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <TextBlock x:Name="HistoryHint" Style="{StaticResource AppCardFootnoteStyle}"
+                                       Text="单击一条可打开它的报告。" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 运行态：设备横幅 + 步骤条 + 左引导/控制 + 右实时记录 ========== -->
+            <Grid x:Name="RunningPanel" Visibility="Collapsed" RowDefinitions="Auto,Auto,*" RowSpacing="12"
+                  SizeChanged="RunningPanel_SizeChanged">
+
+                <!-- 选择卡收起后，这里是唯一还能确认「采的是哪台、哪个接口」的地方 -->
+                <Border x:Name="DeviceBanner" Grid.Row="0" Style="{StaticResource AppCardStyle}" Padding="12,8">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <TextBlock x:Name="DeviceBannerName" Grid.Column="0" FontSize="13" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="DeviceBannerMeta" Grid.Column="1" FontSize="11" VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="StepBar" Grid.Row="1" ColumnSpacing="6" />
+
+                <Grid x:Name="RunningContent" Grid.Row="2" ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel x:Name="GuideColumn" Grid.Column="0" Spacing="12">
+                        <Border Style="{StaticResource AppKpiCardStyle}">
+                            <StackPanel Spacing="8">
+                                <TextBlock x:Name="GuideTitle" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap"
+                                           Text="第 1 / 5 步" />
+                                <TextBlock x:Name="GuideHint" TextWrapping="Wrap" Text="—" />
+                                <TextBlock x:Name="GuideDeviceWarning" TextWrapping="Wrap" Visibility="Collapsed"
+                                           Style="{StaticResource AppCardFootnoteStyle}"
+                                           Text="注意：这台设备本身就是鼠标/键盘。做到「关闭设备」后光标会消失，请用 Ctrl+Enter 完成这一步。" />
+                                <TextBlock x:Name="GuideProgress" Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="GuideNextButton" Click="GuideNext_Click" IsEnabled="False"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            ToolTipService.ToolTip="Ctrl+Enter">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="Enter" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="完成这一步，下一步" />
+                                            <TextBlock Text="Ctrl+Enter" Opacity="0.7" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="GuideRedoButton" Click="GuideRedo_Click" IsEnabled="False"
+                                            ToolTipService.ToolTip="Ctrl+R">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="R" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="重做" />
+                                            <TextBlock Text="Ctrl+R" Opacity="0.6" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="GuideBackButton" Click="GuideBack_Click" IsEnabled="False"
+                                            ToolTipService.ToolTip="Ctrl+←">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="Left" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="上一步" />
+                                            <TextBlock Text="Ctrl+←" Opacity="0.6" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="电量核对" VerticalAlignment="Center"
+                                               Style="{StaticResource AppCardFootnoteStyle}" />
+                                    <TextBox x:Name="BatteryBox" Width="72" PlaceholderText="78"
+                                             InputScope="Number" IsEnabled="False" />
+                                    <TextBlock Text="%" VerticalAlignment="Center"
+                                               Style="{StaticResource AppCardFootnoteStyle}" />
+                                    <Button x:Name="BatteryButton" Content="记录这个电量" Click="Battery_Click"
+                                            IsEnabled="False" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource AppCardFootnoteStyle}" TextWrapping="Wrap"
+                                           Text="可选。从官方软件或设备屏幕上读到电量后记一笔，报告会拿它和报文里数值相同的字节做比对（只是候选线索）。留空或填 0 表示不使用。" />
+                                <TextBlock x:Name="BatteryStatus" Style="{StaticResource AppCardFootnoteStyle}"
+                                           TextWrapping="Wrap" Text="尚未记录电量参照。" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource AppKpiCardStyle}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="采集控制" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="PauseButton" Click="Pause_Click" IsEnabled="False"
+                                            ToolTipService.ToolTip="Ctrl+P">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="P" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock x:Name="PauseLabel" Text="暂停" />
+                                            <TextBlock Text="Ctrl+P" Opacity="0.6" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="StopButton" Click="Stop_Click" IsEnabled="False"
+                                            ToolTipService.ToolTip="Ctrl+S">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control" Key="S" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="停止并生成报告" />
+                                            <TextBlock Text="Ctrl+S" Opacity="0.6" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button x:Name="AbandonButton" Click="Abandon_Click" IsEnabled="False"
+                                            ToolTipService.ToolTip="Ctrl+Shift+S：放弃本次采集并删除已采到的记录">
+                                        <Button.KeyboardAccelerators>
+                                            <KeyboardAccelerator Modifiers="Control,Shift" Key="S" />
+                                        </Button.KeyboardAccelerators>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="放弃这次采集" />
+                                            <TextBlock Text="Ctrl+Shift+S" Opacity="0.6" FontSize="11" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock x:Name="CounterText" Style="{StaticResource AppCardFootnoteStyle}"
+                                           Text="尚未开始采集。" TextWrapping="Wrap" />
+                                <TextBox x:Name="MarkBox" PlaceholderText="自定义标记（可选）：例如 切换到了蓝牙模式"
+                                         IsEnabled="False" />
+                                <Button x:Name="MarkButton" Content="记录这条自定义标记" Click="Mark_Click" IsEnabled="False"
+                                        HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="SendCard" Visibility="Collapsed" Style="{StaticResource AppKpiCardStyle}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="手动发帧（主机 → 设备）" FontWeight="SemiBold" />
+                                <TextBlock x:Name="SendHint" Style="{StaticResource AppCardFootnoteStyle}"
+                                           TextWrapping="Wrap" />
+                                <TextBox x:Name="SendBox" PlaceholderText="例如 13 4A 00 00 …" />
+                                <Button x:Name="SendButton" Content="发送这一帧" Click="Send_Click"
+                                        HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Border x:Name="RecordCard" Grid.Column="1" Style="{StaticResource AppKpiCardStyle}">
+                        <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                            <TextBlock Grid.Row="0" Text="实时记录" FontWeight="SemiBold" />
+                            <!-- 在等什么：按已采秒数升级，免得用户进来一两秒没看到报文就退掉 -->
+                            <TextBlock x:Name="WaitHint" Grid.Row="1" FontSize="11" TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                            <ListView x:Name="RecordList" Grid.Row="2" SelectionMode="None">
+                                <!-- 新报文进来时跟着滚，用户不用手动拖到最底 -->
+                                <ListView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsStackPanel ItemsUpdatingScrollMode="KeepLastItemInView" />
+                                    </ItemsPanelTemplate>
+                                </ListView.ItemsPanel>
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="v:CaptureRecordRow">
+                                        <Grid>
+                                            <!-- 分割行：进入某一步 / 打自定义标记时插一条，标出后面这批报文属于哪一段 -->
+                                            <TextBlock Text="{x:Bind Header}" Visibility="{x:Bind HeaderVisibility}"
+                                                       FontWeight="SemiBold" FontSize="11" TextWrapping="Wrap"
+                                                       Margin="0,8,0,2"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="10" Padding="0,2"
+                                                  Visibility="{x:Bind RecordVisibility}">
+                                                <!-- 协议通道色条：同一「类型 + report ID」始终同色，扫一眼就能分开 -->
+                                                <Border Grid.Column="0" Width="3" CornerRadius="1.5"
+                                                        Background="{x:Bind Accent}" />
+                                                <TextBlock Grid.Column="1" Text="{x:Bind Time}" Style="{StaticResource AppCardFootnoteStyle}" />
+                                                <TextBlock Grid.Column="2" Text="{x:Bind Kind}" Style="{StaticResource AppCardFootnoteStyle}"
+                                                           Foreground="{x:Bind Accent}" />
+                                                <TextBlock Grid.Column="3" Text="{x:Bind Hex}" FontFamily="Consolas"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="4" Text="{x:Bind Note}" Style="{StaticResource AppCardFootnoteStyle}" />
+                                            </Grid>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

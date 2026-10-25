@@ -78,16 +78,22 @@ public class AppSettings
         ["Ajazz"] = false,
         ["Thunderobot"] = false,
         ["Inphic"] = true,    // 英菲克 report 0x03 被动监听，不发送任何帧
-        ["Darkrim"] = false,  // 寸渊影弑：发官方同款 GetBasicInfo(0x09) 才拿得到电量，会写帧，默认关（§16）
-        ["GameSir"] = true,   // 盖世小鸡：每轮发一帧官方心跳开启状态流，60 秒突发读一次，默认开（§17）
+        ["Darkrim"] = false,  // 寸渊影弑：发官方同款 GetBasicInfo(0x09) 才拿得到电量，会写帧（darkrim.md §1.6）
+        ["GameSir"] = false,  // 盖世小鸡：要发心跳帧才能读到电量，属主动通信（gamesir.md §1.4）
         ["Hecate"] = true,    // HECATE/漫步者电竞：厂商集合 0xFF1C/0x0092 被动状态帧，零写入（见 docs/hardware/hecate.md §1）
+        ["HecateWireless"] = false, // HECATE Wireless Receiver 35BB:D3FB：17 字节 STATUS/POWER 查询，要写帧，默认关闭（hecate.md §2）
         ["Delux"] = false,    // 与英菲克同为 1D57:FA65，只读 0x000A；本机尚未扫到该接收器，默认关
-        ["Aula"] = false,     // 狼蛛 F99 Pro：要写 0x13 会话帧才能读电量，默认关闭
+        ["Aula"] = false,     // 狼蛛键盘电量查询需要发帧，默认关闭
+        ["Akg"] = false,      // AKG 接收器电量查询需要发帧，默认关闭
         ["DualSense"] = true, // 索尼手柄蓝牙 HID 只读，不发送报告（见 docs/hardware/dualsense.md）
         ["Ganss"] = false,   // GANSS GS3104T-Pro：发固定查询帧才能读电量（会写），默认关闭
         ["Cherry"] = false,   // CHERRY PIXIU75：64 字节块通道读块 0x1A，要写帧，默认关闭
         ["Pulsar"] = false,   // 派世 X2 V2：17 字节 STATUS/POWER 查询，要写帧，默认关闭
         ["Eweadn"] = false,   // 前行者 X87 键盘 / S9 鼠标：两套协议都要发查询帧，默认关闭（eweadn.md §1）
+        ["Razer"] = false,      // 雷蛇毒蝰 V4 Pro：经典 90 字节 feature 查询，要写帧，默认关闭（razer.md）
+        ["SonyInzone"] = false, // 索尼 INZONE H9 II：0xFF04 控制传输查询，要写帧，默认关闭（inzone-h9.md）
+        ["Atk"] = false,        // ATK 8K 接收器（FF02 口 17B）：发 08 04…49 只读查询，要写帧，默认关闭（atk.md）
+        ["HyperX"] = true,      // HyperX CF2（03F0:0AC1 FF90 口）：零写入，纯被动监听（hyperx-cf2.md）
     };
 
     /// <summary>是否把本机（笔记本）电池也纳入监控。默认关闭——它是"另一类设备"，不像外设那样需要盯着，用户明确要时才开（见设置页「监控本机电量」）。
@@ -104,6 +110,11 @@ public class AppSettings
     /// <summary>删除过条目的设备：Id → 删除时刻（Unix ms）。插件每轮会重新上报仍在位的离线条目，
     /// 靠它挡住；设备重新上线时自动清除（用户删的是"离线条目"，设备回来了就该显示）。</summary>
     public ConcurrentDictionary<string, long> DismissedDevices { get; set; } = new();
+
+    /// <summary>用户"忽略"的设备：Id → 名称与时间。只过滤显示与历史写入，插件照常轮询，
+    /// 所以恢复后立刻有数据（与 <see cref="BlockedDevices"/> 的分工见 docs/project/code-flow.md §5.2）。
+    /// 并发字典：忽略发生在 UI 线程、查询发生在插件轮询线程。</summary>
+    public ConcurrentDictionary<string, IgnoredDevice> IgnoredDevices { get; set; } = new();
 
     /// <summary>日志级别。取值见 <see cref="VigilWatt.Core.Utils.LogLevelNames"/>（Off/Debug/Info/Warn/Error），默认 Info；未知取值按 Info。**重启生效**（启动时赋给 Log.MinLevel）。</summary>
     public string LogLevel { get; set; } = VigilWatt.Core.Utils.LogLevelNames.Default;
@@ -148,6 +159,7 @@ public class AppSettings
             _cached.DeviceCustomizations ??= new Dictionary<string, DeviceCustomization>();
             _cached.BlockedDevices ??= new ConcurrentDictionary<string, BlockedDevice>();
             _cached.DismissedDevices ??= new ConcurrentDictionary<string, long>();
+            _cached.IgnoredDevices ??= new ConcurrentDictionary<string, IgnoredDevice>();
 
             // 老 settings.json 缺新插件的开关键时补默认值：反序列化会用 JSON 里的字典**整体替换**默认字典，
             // 缺键的插件会被 DeviceManager/设置页的 TryGetValue 判成"关闭"，新增插件（如 Betop）装上去默认不工作、用户还以为是功能没实现。

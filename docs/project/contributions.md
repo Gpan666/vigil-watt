@@ -3,6 +3,14 @@
 > 社区改动收进本仓库时记一笔：谁、哪个 PR、收了什么、没收什么。协议细节留在专题文档。
 > **面向用户的名单在根目录 [CONTRIBUTORS.md](../../CONTRIBUTORS.md)**（只写"谁做了什么"）；本文只记收了什么、没收到什么、是否本机复测，两处不重复。
 
+## 2026-10-25
+
+- **mofeng816**（[#48](https://github.com/evren-oct/vigil-watt/pull/48)，目标 `dev`）：纳入 ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`）与 HyperX Cloud Flight 2 耳机（`03F0:0AC1`）两个品牌插件——`AtkCodec` / `AtkPlugin`、`Cf2Codec` / `HyperXPlugin`，附 `atk.md`、`hyperx-cf2.md` 两份协议文档、`sources.md` 来源与许可边界、`safety.md` §3.1 开关现状、`protocols.md` 品牌索引、README 中英设备表，以及 23 条编解码用例。ATK 是主动查询（`FF02` 口 17 字节 `08 04 …49`），**默认关**，响应必须过运行时校验和才采信（否则固件混发的普通鼠标报文会被读成假读数），接口长度另作一层判据；HyperX 是纯被动（`FF90` 口推送帧），**默认开、零写入**，充电态只认插拔事件帧。基类改动仅 1 行：`IdFor` 由 `protected` 改 `protected virtual`，供 ATK 把接收器与有线本体归一成同一条设备记录（默认实现不变）。**未纳入**项：无，该 PR 只含这两个品牌的三台设备，无临时探针、独立工程或厂商源码。**本机无这两台设备，未真机复测**；合入前构建 0 警告 0 错误，`AtkCodecTests` / `Cf2CodecTests` 23 项与全量 888 项（1 跳过）单测通过。已知边界记 CR-98（显示名依赖本体、进程重启后丢失）与 CR-99（配对表硬编码，新 PID 需补行）。
+
+## 2026-10-23
+
+- **endermiteDOTcn**（[#44](https://github.com/evren-oct/vigil-watt/pull/44)，目标 `dev`）：纳入 AULA HERO 68 Air 2.4G 电量/充电支持与 AKG N9 Hybrid 接收器电量支持，以及协议文档、来源记录和必要回归测试。两者继承 `BatteryPluginBase`，共用各自品牌开关，默认关闭。贡献者真机验证 HERO 68 Air 10% 放电/充电及插件认领、轮询；N9 的 Python 与 C# 查询见 50%，随后真实 DeviceManager 首次认领加五轮自然查询均读到 100%，原始证据见 `hardware/akg.md` §3，上游维护者尚未真机复测。N9 充电时无法工作为用户观察，充电测试已取消，状态保持 Unknown。未纳入其它连接方式、其它型号，也不包含临时探针、独立验证工程、独立日志或厂商源码；必要日志片段保留在协议文档。2026-10-25 已合入 `dev`（`a15d509`）；本机无这两台设备，未真机复测，合入前构建 0 警告 0 错误，`AkgN9` / `AulaHero68` / `AulaProtocol` 60 项与离线策略等基类回归 44 项单测通过。
+
 ## 2026-10-19
 
 - **dotisland**（[#13](https://github.com/evren-oct/vigil-watt/pull/13)）：纳入 HECATE G5M Pro（`35BB:D00B`）只读电量插件，以及拔出设备后上报离线。认领收窄到 VID、PID 和 usage；迈从插件排除 `0x35BB`；探测窗口内没有任何报文则不认领。未纳入 [#14](https://github.com/evren-oct/vigil-watt/pull/14) 的按显示名去重。电量帧为本贡献者真机声明，本机未复测。
@@ -17,3 +25,21 @@
 - **shengzhi233**（[#36](https://github.com/evren-oct/vigil-watt/pull/36)）：纳入 CHERRY PIXIU75 与派世 Pulsar X2 V2 两个插件（`CherryCodec` / `CherryPlugin`、`PulsarCodec` / `PulsarPlugin`，21 条 codec 用例，帧字面量取自真机），协议文档 §13 / §14 与 BACKLOG 两条一并收下。两个品牌都是「发查询帧才出读数」，按 R1 默认关，走 `SupportsDiscoveryProbe` + `ProbeCooldown = 10s`。本机无这两台设备，未复测；作者真机日志与官方软件读数一致（48% / 55% 充电、20% + 3566 mV）。**收口改动**：BACKLOG 的 CR-73 / CR-74 已被 dev 占用，本次条目改为 CR-81 / CR-82，并按代码实情重写 CR-81（3 轮无应答即转离线 + 熔断，不是「不判离线」）；changelog 里同一句一并改正。
 - **KNA7022**（[#25](https://github.com/evren-oct/vigil-watt/pull/25)）：纳入黑爵 AK870（`3151:4011`，feature `F7` 状态查询）与雷神 ML903 NearLink Se（`369B:0234`，`0xA0` 设备信息 TLV `0x0225`）两个插件 + 29 条用例，默认关；附「迈从不得误认这两款」的回归用例。本机无该设备，未复测；作者实机确认过 AK870 休眠/唤醒与 ML903 关机后无响应、重开恢复。充电状态保持 `Unknown`（作者未验证）。该 PR 只含设备适配，无未纳入项。
 - **haihuang0506**（[#33](https://github.com/evren-oct/vigil-watt/pull/33)）：纳入迈从 K7 V2 Ultra+（`3837:1018`）的 `mouse-k7` 协议（`MchoseK7Codec` + 分类器 `MouseK7` + 16 条真机帧用例），并入现有 `MchosePlugin`、共用 `Mchose` 开关，默认关。作者真机连跑 6.5 小时，读数与官方 M HUB 一致。**收口改动**：K7 协议小节从 §13 顺延为 §15（§13 / §14 已给 CHERRY / PULSAR），内部小节与代码指针同步；`MchoseK7Codec` 类头 7 行压到 3 行（配额 ≤5）。**未纳入**同作者 [#34](https://github.com/evren-oct/vigil-watt/pull/34) 的其余内容（VGN 蜻蜓 F1/F2、狼蛛 F108 Pro、安装位置/MSI、展示层去重、贴片设备筛选、`tools/battcheck`）——K7 部分与 #33 **逐字节相同**，只差类头署名（#34 写 `Mightling`），以先提的 #33 为准。
+- **hjc3094893379**（[#38](https://github.com/evren-oct/vigil-watt/pull/38)）：纳入迈从 G3 V2（`3837:4245`）的 `gmouse` 协议（`MchoseGmouseCodec` + 分类器 `Gmouse` + 16 条 codec 用例 + 2 条分类器用例），并入现有 `MchosePlugin`、共用 `Mchose` 开关，默认关。Gmouse 是主动查询协议（65 字节 `00 55 30 A5 0B 2E…` 查询帧，应答前缀 `AA 30`，电量 `[off+8]` 充电 `[off+9]`），与 K7（`0x0900`/`0x0600`，usage `0xFF01/0x0001`）是两套独立链路，靠完整指纹（VID+PID+usagePage+usage+双向长度）区分。协议来源为社区项目 `aliezzzz/mchose-battery` 与官方 M HUB 网页端 `/gmouse` 打包 JS。该 PR 只含 G3 V2 一台设备，无未纳入项。本机无该设备，未复测；作者真机读到 89% / 86% 未充电。**收口改动（维护者）**：注释压回配额、修正「`0xA8A5` / `0xA8A4` 是 VID 不是 PID」、充电态改走 `ChargingStateMap`、`safety.md` §3.1 登记第五类设备、`mchose.md` §4 补未验证边界。
+
+## 2026-10-23
+
+- **k1ky0**（[#43](https://github.com/evren-oct/vigil-watt/pull/43)）：纳入寸渊影弑耳机与官方驱动的抢占用修复——新增 `OfficialAppGuard`（5 秒缓存的进程探测），官方 `DARKRIM.exe` 在跑时插件在 `IsCandidate` / `ProbeWrites` / `PollDevice` 三处同时让位（不认领 = 不打开句柄，这才是真让位），官方退出后下一轮自动恢复；并补 GameSir 解析失败诊断（失败日志记 report ID 分布，用来区分"接到别的集合"与"帧布局变了"）。**行为变更**：盖世小鸡按"主动通信默认关闭"改为默认关，`DisplayNameEn` 统一成 `GAMESIR`。**未纳入**：PR 自带的发版元数据（`<Version>` 1.2.4 与 `release-notes.md` 的 1.2.4 段）已回退到 1.2.3——那段只写了本 PR 的两台设备，缺 #54/#49/#50，发版时统一写。本机复测：构建 0 警告 0 错误，`DarkrimOfficialGuardTests` 4 项 + `GameSirCodecTests` 20 项全过；**本机无这两台设备，未做设备级验证**。
+- **Mutsuki233**（[#45](https://github.com/evren-oct/vigil-watt/pull/45)）：纳入罗技 PRO X 2 LIGHTSPEED 耳机（`046D:0AF7`）的 Centurion 只读电量通道、经典蓝牙显示名归一、失败容错与 2.4G 查询帧解析 / 名称两条单测。认领硬绑 `046D:0AF7` + `0xFFA0:0x0001` + 输入输出各 ≥64 字节，沿用「罗技」插件开关；Centurion 连续 4 次无应答才熔断转离线（比基类默认多容忍 1 次，拔线瞬间的短时超时不该造成离线闪烁）。**未纳入** HID++ 路径的改动与 USB 有线模式认领——后者耳机支持有线，但本次未验证。真机由贡献者本人验证：2.4G 放电 / 充电 / 拔线恢复 / 休眠唤醒，蓝牙电量与 Windows 设置一致，关闭罗技开关后插件卸载且不再查询（未做 USB 总线级抓包）。测试项目编译通过；单测在贡献者环境里因测试宿主起不来未能运行。**收口改动（维护者）**：本机复跑全量单测 **662 通过 / 1 跳过（CR-83）/ 0 失败**，用例本身没问题；`WritesEnabled` 的注释仍写「闸门是唯一写点内的 `HidppIO.WritesAllowed`」，与 Centurion 新增的第二个写点不符，已改写为两个写点同一道闸门；补回被误删的 `IsHidppInterface` 摘要并整理空行；`review-standard.md` 的 R2 例外条款按「混合型插件」重写；`logitech.md` 补 `## 1.` 标题（原文只有 §2，编号从 2 开始）；handoff §4 的 `#24` 改为 `#45`（#24 是设备适配指南 issue）；CR-91~93 记入 BACKLOG。
+- **Delitriuz**（[#49](https://github.com/evren-oct/vigil-watt/pull/49)）：纳入 HECATE G3M Pro 升级版（接收器 `35BB:D3FB`）插件 `HecateWireless`——17 字节 `0xFF02` 通道，STATUS `08 03` 判在线、POWER `08 04` 读电量，帧与派世同族故复用 `PulsarCodec`；要写两条只读查询，所以与被动的 `Hecate` 分开、默认关、走 `SupportsDiscoveryProbe` 节拍。附 `HecateWirelessFrameTests` 3 项，`safety.md` §3.1 登记写入闸门。文档侧给出 Kysona 内核驱动出处与「10 分钟被动监听零报文」的结论（`hecate.md` §2），据此判定这颗接收器没有被动通道、只能主动查。**未纳入**：`protocols.md` 的索引行（该文件只留索引，按项目规则不再往里加行）；鼠标型号协议里没找到型号串，显示名由用户告知后写死。**未验证**：充电位（作者未采到）。本机复测：构建 0 警告 0 错误，3 项帧解析用例全过；**本机无该接收器，未做设备级验证**。
+
+## 2026-10-24
+
+- **dotisland**（[#14](https://github.com/evren-oct/vigil-watt/pull/14)）：只摘取两处——BLE 端点在 GATT 直读打开设备后补全缓存名（`BleBatteryWatcher.ReadBatteryViaGattAsync`，Watcher 的 Added 常带空名），设备列表电量列 `MinWidth=78` 右对齐（`99%` 与 `--` 宽度不同会让相邻行右端错位）。**未纳入** PR 核心的「按显示名双通道去重」：与本项目刚确认的决策冲突（多模连接厂家就按三个通道算，且托盘/贴片/小组件都只取在线设备，离线条目不占名额）；按 `Trim()` 后的名字分组，对 `迈从 2.4G Wireless` / `MCHOSE G87 5.0` 这种名字不同的设备无效；另有在 `Devices` getter 里改 `Kind` 的副作用与同型号误合并风险。也未采纳 `Protocol` 由 `BLE GATT` 改成「蓝牙」。本机复测：构建 0 警告 0 错误、相关单测 38 项通过。**收口改动（维护者）**：补名后补一次 `DeviceUpdated`（原 PR 补名后不通知 UI，界面不会立刻刷新）。
+- **Gpan666**（[#50](https://github.com/evren-oct/vigil-watt/pull/50)）：只纳入历史库时间戳的时区修正——`HistoryStore` 读库时把 UTC 毫秒转成本地时区
+  （新增 `LocalTime()`，六个读路径统一走它），修掉离线设备「更新于」显示成 UTC、比本地时间少 8 小时的问题，
+  附单测 `H14`（断言读回的偏移是本地时区，且直接格式化不会显示成 UTC）。
+  **未纳入**任何设备协议适配、UI 改版、设置页改动与其它历史库功能；`CONTRIBUTORS.md` 已单独记一行
+  （原写「署名由同作者的 ATK / X9 PR 提供」不成立，#28 未合入）。本机已复测：在装机的 1.2.1 本地构建上对照
+  在线路径与库路径两类设备的时间显示，差值从 8 小时变为 0。
+- **imx1n**（[PR #54](https://github.com/evren-oct/vigil-watt/pull/54)）：纳入雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体）与索尼 INZONE H9 II（`054C:0FA8`，接收器模式）两个插件（`RazerCodec` / `RazerPlugin`、`InzoneCodec` / `InzoneH9Plugin`，21 条 codec 用例）。两者都是「发查询帧才出读数」，按 R1 默认关，走 `SupportsDiscoveryProbe` + `ProbeCooldown = 8s`；开关键 `Razer` / `SonyInzone` 已登记进 `AppSettings.PluginEnabled` 默认表（缺这行会被当成脏键删掉）。**核心改动**：`HidDeviceHandle` 新增 `SendOutputReport`（包 `HidD_SetOutputReport`）——索尼只认控制传输 SET_REPORT，写中断 OUT 端点时设备原样回显，会把回显误读成真实读数。**作者真机验证**：雷蛇 100%、索尼 78→94%（充电中），与应用日志、官方客户端读数交叉一致；关掉 INZONE Hub 后索尼仍可读。**未定项**：雷蛇有线模式下 `0x84` 充电查询无有效应答，充电状态保持 `Unknown`。

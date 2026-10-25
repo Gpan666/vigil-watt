@@ -27,6 +27,9 @@ public sealed class HidDeviceInfo
     public string Product { get; init; } = "";
     public string Manufacturer { get; init; } = "";
 
+    /// <summary>序列号。设备不提供时为空串（采集侧要转成 null，不能当"读失败"）。</summary>
+    public string SerialNumber { get; init; } = "";
+
     public string VidPid => $"VID_{VendorId:X4}&PID_{ProductId:X4}";
 
     public override string ToString() =>
@@ -35,10 +38,24 @@ public sealed class HidDeviceInfo
 
     /// <summary>打开设备。键盘/鼠标等受保护的 collection 会抛 UnauthorizedAccessException。</summary>
     public HidDeviceHandle Open()
+        => OpenCore(NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE);
+
+    /// <summary>只读打开：采集只用它，避免为了读一份报文去申请写权限（见 docs/project/capture.md）。</summary>
+    public HidDeviceHandle OpenRead()
+        => OpenCore(NativeHid.GENERIC_READ);
+
+    /// <summary>
+    /// 读写打开。**只有采集页在用户显式授权「允许发送」时用它**——常规采集一律 <see cref="OpenRead"/>，
+    /// 从访问权限层面保证写不进去（见 docs/project/capture.md）。
+    /// </summary>
+    public HidDeviceHandle OpenReadWrite()
+        => OpenCore(NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE);
+
+    private HidDeviceHandle OpenCore(uint access)
     {
         var handle = NativeHid.CreateFileW(
             DevicePath,
-            NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE,
+            access,
             NativeHid.FILE_SHARE_READ | NativeHid.FILE_SHARE_WRITE,
             IntPtr.Zero,
             NativeHid.OPEN_EXISTING,
@@ -55,7 +72,8 @@ public sealed class HidDeviceInfo
             };
         }
 
-        var stream = new FileStream(handle, FileAccess.ReadWrite, 0, isAsync: true);
+        var stream = new FileStream(handle,
+            access == NativeHid.GENERIC_READ ? FileAccess.Read : FileAccess.ReadWrite, 0, isAsync: true);
         return new HidDeviceHandle(this, stream);
     }
 }
@@ -85,6 +103,16 @@ public sealed class HidDeviceHandle : IDisposable
         return buffer;
     }
 
+    /// <summary>通过控制传输读取指定输入报告；部分设备不向中断输入端点推送状态。</summary>
+    public byte[]? GetInputReport(byte reportId)
+    {
+        ushort length = Info.InputReportLength;
+        if (length == 0) return null;
+        var buffer = new byte[length];
+        buffer[0] = reportId;
+        return NativeHid.HidD_GetInputReport(_stream.SafeFileHandle, buffer, length) ? buffer : null;
+    }
+
     /// <summary>
     /// 读该接口**输出报文**的 report ID（由 caps 的 ReportID 字段给出）。0 = 该接口不使用 report ID；读不到返回 null。
     /// **绝不能硬编码**（北通 T9 三个厂商集合 1/4/5、鲲鹏20 是 2）：写一个该接口没有的 report ID，驱动直接报 ERROR_INVALID_FUNCTION。
@@ -109,6 +137,21 @@ public sealed class HidDeviceHandle : IDisposable
         {
             NativeHid.HidD_FreePreparsedData(preparsed);
         }
+    }
+
+    /// <summary>
+    /// 发 output report（**控制传输 SET_REPORT**，走 HidD_SetOutputReport）。
+    ///
+    /// 和 <see cref="WriteOutput"/> 不是一条路：后者写中断 OUT 端点。多数设备两条都能走，
+    /// 但索尼 INZONE 这类只认控制传输——写中断端点时设备会把报文**原样回显**，
+    /// 看上去像"有应答"，实际是假阳性（2026-10-24 H9 II 实测，见 docs/hardware/inzone-h9.md）。
+    /// </summary>
+    public bool SendOutputReport(byte[] report)
+    {
+        if (Info.OutputReportLength == 0) return false;
+        var buffer = new byte[Info.OutputReportLength];
+        Array.Copy(report, 0, buffer, 0, Math.Min(report.Length, buffer.Length));
+        return NativeHid.HidD_SetOutputReport(_stream.SafeFileHandle, buffer, (uint)buffer.Length);
     }
 
     /// <summary>发送 feature report（带自定义 payload），成功后可选择立刻读回。</summary>

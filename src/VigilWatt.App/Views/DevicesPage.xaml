@@ -2,7 +2,8 @@
     x:Class="VigilWatt.App.Views.DevicesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:v="using:VigilWatt.App.ViewModels">
+    xmlns:v="using:VigilWatt.App.ViewModels"
+    xmlns:controls="using:VigilWatt.App.Controls">
 
     <Grid RowDefinitions="Auto,*,Auto" Padding="20,16">
 
@@ -38,7 +39,8 @@
                             Margin="0,0,0,8"
                             RightTapped="DeviceRow_RightTapped">
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
-                            <FontIcon Grid.Column="0" FontSize="22" Glyph="{x:Bind IconGlyph}" />
+                            <controls:DeviceIconPresenter Grid.Column="0" VerticalAlignment="Center"
+                                                          Kind="{x:Bind IconKind}" IconColor="{x:Bind IconColor}" />
                             <StackPanel Grid.Column="1" Spacing="6">
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Text="{x:Bind Name}" FontSize="15" FontWeight="SemiBold"
@@ -59,6 +61,7 @@
                             </StackPanel>
                             <TextBlock Grid.Column="2" Text="{x:Bind PercentText}" FontSize="26"
                                        FontWeight="Bold" VerticalAlignment="Center"
+                                       MinWidth="78" TextAlignment="Right"
                                        Foreground="{x:Bind PercentBrush}" />
                         </Grid>
                     </Border>
@@ -72,15 +75,20 @@
                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
             <TextBlock Text="未发现设备" FontSize="15" HorizontalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock Text="连接蓝牙设备或插入 2.4G 接收器，然后点击刷新" FontSize="12"
+            <TextBlock x:Name="EmptyHint" Text="连接蓝牙设备或插入 2.4G 接收器，然后点击刷新" FontSize="12"
                        HorizontalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
         </StackPanel>
 
-        <!-- 已屏蔽设备入口：永久移除后设备不在列表里，恢复入口只能放这；没有屏蔽记录时整行隐藏 -->
-        <HyperlinkButton x:Name="BlockedBar" Grid.Row="2" Margin="0,4,0,0" Padding="0"
-                         HorizontalAlignment="Left" Click="ManageBlocked_Click" Visibility="Collapsed">
-            <TextBlock x:Name="BlockedText" FontSize="12" />
-        </HyperlinkButton>
+        <!-- 不在列表里的设备只能从这里恢复：忽略与永久移除是两套名单，各给一个入口；都为 0 时整行隐藏 -->
+        <StackPanel x:Name="HiddenBars" Grid.Row="2" Orientation="Horizontal" Spacing="16"
+                    Margin="0,4,0,0" HorizontalAlignment="Left" Visibility="Collapsed">
+            <HyperlinkButton x:Name="IgnoredBar" Padding="0" Click="ManageIgnored_Click" Visibility="Collapsed">
+                <TextBlock x:Name="IgnoredText" FontSize="12" />
+            </HyperlinkButton>
+            <HyperlinkButton x:Name="BlockedBar" Padding="0" Click="ManageBlocked_Click" Visibility="Collapsed">
+                <TextBlock x:Name="BlockedText" FontSize="12" />
+            </HyperlinkButton>
+        </StackPanel>
     </Grid>
 </Page>

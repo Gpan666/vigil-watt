@@ -7,6 +7,13 @@
 
 | 编号 | 结论 |
 |---|---|
+| CR-99 | 2026-10-24 使用真实 DeviceManager 原生一分钟节拍完成首次认领及五轮自然轮询：初次第 14 次读取返回长度 0，其后各轮第 1 次返回长度 0，均读取 100%，未失败或熔断。原始日志与边界见 `hardware/akg.md` §3。原分支编号 CR-94 与 dev 的迈从条目重号，合入时迁为 CR-99。 |
+| CR-95 | AKG 空闲态确认及响应阶段对瞬时空读、其它报告 ID 有界重试；持续失败不写入或不重发，格式错误仍立即停止。回归覆盖恢复、耗尽窗口及等待中关闭开关。 |
+| CR-96 | AKG 只在本轮按有效区域跳过相邻重复快照，空闲态及新查询重置比较；回归覆盖重复分片、尾部旧缓存变化及连续两轮相同电量。无事务号的剩余歧义见 `hardware/akg.md` §2。 |
+| CR-98 | HERO 68 Air 文档与 changelog 明确仅处理完整包之间的通知穿插；响应分片中途插入通知仍可能使本轮失败，不再声称普遍支持。传输层离线测试仍跟踪 CR-97。 |
+| CR-85 | 补齐 endermiteDOTcn 的贡献者名单和 PR #44 待合入范围，明确贡献者真机验证及上游维护者尚未复测。 |
+| CR-86 | AKG 每轮独立等待成功 ACK，忽略此前的异步结果；增加独立报告、同报告、缺失 ACK 和跨轮超时的 4 项回归用例。无事务号的协议边界见 `hardware/akg.md` §2。 |
+| CR-87 | 传输层返回匹配的电量消息，成功 Info 日志按电量变化记录 `原始=<HEX>`，不输出报告尾部旧缓存；回归测试验证返回消息与所采纳电量一致。 |
 | CR-73 | 贴片拖动改为轮询驱动（Win11 任务栏 XAML 吃掉子窗口鼠标消息）。`WM_MOUSEACTIVATE` 让 DefWindowProc 先处理，只在父窗口要吃消息时干预；fallback 为常驻 10Hz 轮询（拖动中 60Hz）。设置页新增「重置贴片位置」按钮。见 runtime-pitfalls.md §16.5.1 |
 | CR-62 | 空槽负缓存 5 分钟 + 每轮最多补探 1 槽；空接收器也启只读监听。见 code-flow.md §2.1 |
 | CR-01 | 罗技补上写入闸门、熔断和默认关闭 |
@@ -63,6 +70,8 @@
 | CR-75 | 拔出后 HID++ 通知空转：`BatteryPluginBase.StartPassiveListen` 与 `LogitechPlugin.EnsureListening` 按"连续 3 次读取在 100ms 内返回 null"判定句柄失效，退避 200ms。正常静音仍等满 500ms，节拍不受影响 |
 | CR-76 | 与 CR-75 同一修法落地。Inphic/Hecate/Delux 的读窗口 `continue` 有 deadline 兜住（不无限循环），未改 |
 | CR-77 | `MarkOffline` 注释改为"插件内软离线的唯一落地点"，并注明拔出走 `ReconcileRemovals`（不该盖 `LastUpdated`）。行为本来就对，是注释过满 |
+| CR-68 | 未采用 PR #14 的按显示名去重，改为按 MAC 判定自研实现：`Ble/DualChannelId` 归一 `btc:`/`ble:` 端点，`DeviceManager.AbsorbDualChannel` 收敛到经典那条。PR #14 的 `Devices` getter 副作用与 `NormalizeName` 大小写问题随之不适用 |
+| CR-86 | 历史库时间戳按本地时区读回（`HistoryStore.LocalTime`）：离线设备的「更新于」原先显示成 UTC，比本地时间少 8 小时。见 runtime-pitfalls.md §21 |
 
 ## wontfix
 

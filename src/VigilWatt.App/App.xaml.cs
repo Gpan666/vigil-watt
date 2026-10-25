@@ -48,6 +48,7 @@ public sealed class AppServices : IDisposable
         if (_disposed) return;
         _disposed = true;
         // 逐个兜底：释放 HID 句柄 / Timer / SQLite 连接。任一项失败不能连累其余（CR-07）。
+        try { Views.CapturePage.DisposeActive(); } catch (Exception ex) { Log.Warn($"采集会话释放失败: {ex.Message}"); }
         try { Manager.Dispose(); } catch (Exception ex) { Log.Warn($"DeviceManager 释放失败: {ex.Message}"); }
         try { History.Dispose(); } catch (Exception ex) { Log.Warn($"HistoryStore 释放失败: {ex.Message}"); }
     }

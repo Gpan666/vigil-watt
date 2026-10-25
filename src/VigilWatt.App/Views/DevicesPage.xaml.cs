@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Navigation;
 using VigilWatt.App.Services;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using System.Collections.ObjectModel;
 using System.Text;
 
 namespace VigilWatt.App.Views;
@@ -27,10 +28,15 @@ public sealed partial class DevicesPage : Page
     /// <summary>事件是否已订阅：Loaded 可能重复触发，不挡住就会叠加回调。</summary>
     private bool _hooked;
 
+    /// <summary>列表数据源。只在构造时赋给 ItemsSource，之后按 Id 增量同步——
+    /// 整块换 ItemsSource 会让 ListView 丢弃所有行容器重建，每分钟轮询都闪一下。</summary>
+    private readonly ObservableCollection<DeviceRowModel> _rows = new();
+
     public DevicesPage()
     {
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
+        DeviceList.ItemsSource = _rows;
         Loaded += OnPageLoaded;
         Unloaded += OnPageUnloaded;
     }
@@ -78,21 +84,64 @@ public sealed partial class DevicesPage : Page
 
     private void Refresh()
     {
+        try
+        {
+            RefreshCore();
+        }
+        catch (Exception ex)
+        {
+            // 列表刷新失败不能带走进程：异常从 ObservableCollection 的通知回调里逸出时，
+            // App.UnhandledException 的 e.Handled 拦不住，进程会直接 fail-fast（runtime-pitfalls.md §22）
+            Log.Error("设备列表刷新失败", ex);
+        }
+    }
+
+    private void RefreshCore()
+    {
         var devices = App.Services.Manager.Devices;
-        DeviceList.ItemsSource = devices.Select(d => DeviceRowModel.From(
-            d, App.Services.Settings, App.Services.Manager.GetRemainingTimeEstimate(d))).ToList();
+        var settings = App.Services.Settings;
+
+        // 按 Id 取旧行，内容指纹相同就整行复用，避免静止设备跟着重建
+        var existing = new Dictionary<string, DeviceRowModel>(_rows.Count);
+        foreach (var row in _rows) existing[row.Id] = row;
+
+        var fresh = new List<DeviceRowModel>(devices.Count);
+        foreach (var d in devices)
+        {
+            existing.TryGetValue(d.Id, out var previous);
+            fresh.Add(DeviceRowModel.From(d, settings, App.Services.Manager.GetRemainingTimeEstimate(d), previous));
+        }
+
+        // 逐位比较引用：复用的行原地不动，只替换真正变了的那些
+        for (int i = 0; i < fresh.Count; i++)
+        {
+            if (i >= _rows.Count) _rows.Add(fresh[i]);
+            else if (!ReferenceEquals(_rows[i], fresh[i])) _rows[i] = fresh[i];
+        }
+        while (_rows.Count > fresh.Count) _rows.RemoveAt(_rows.Count - 1);
+
         var online = devices.Count(d => d.IsOnline);
         // 带上时间戳：即使设备数没变，用户也能一眼看出这次刷新确实跑过了
         SummaryText.Text = $"{online} 台在线 / 共 {devices.Count} 台 · {DateTime.Now:HH:mm:ss} 更新";
 
-        bool empty = devices.Count == 0;
-        DeviceList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
-        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-
-        // 永久移除的设备不在列表里，恢复入口只有这一行，所以它必须跟着名单实时变
+        // 不在列表里的设备只能从这里恢复，所以两个入口都要跟着名单实时变
         int blocked = App.Services.Manager.BlockedDevices.Count;
         BlockedBar.Visibility = blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
         BlockedText.Text = $"已屏蔽 {blocked} 台设备 · 管理";
+
+        int ignored = App.Services.Manager.IgnoredDevices.Count;
+        IgnoredBar.Visibility = ignored > 0 ? Visibility.Visible : Visibility.Collapsed;
+        IgnoredText.Text = $"已忽略 {ignored} 台设备 · 管理";
+
+        HiddenBars.Visibility = blocked > 0 || ignored > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        bool empty = devices.Count == 0;
+        DeviceList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        // 全被忽略时还说"未发现设备"会把人引向"是不是没扫到"，得指向真正的恢复入口
+        EmptyHint.Text = ignored > 0
+            ? $"已忽略 {ignored} 台设备，可在下方恢复"
+            : "连接蓝牙设备或插入 2.4G 接收器，然后点击刷新";
     }
 
     private async void CustomizeDevice_Click(object sender, RoutedEventArgs e)
@@ -147,18 +196,22 @@ public sealed partial class DevicesPage : Page
             : device.Kind;
         DeviceKind? selectedKind = current?.IconKind;
         var iconChoices = new List<(RadioButton Button, Border Card)>();
+        const int iconColumns = 4;
         var iconGrid = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < iconColumns; i++)
             iconGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        for (int i = 0; i < 2; i++)
-            iconGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var options = new (DeviceKind? Value, DeviceKind Preview, string Label)[]
         {
             (null, automaticKind, "自动"), (DeviceKind.Unknown, DeviceKind.Unknown, "通用"),
             (DeviceKind.Mouse, DeviceKind.Mouse, "鼠标"), (DeviceKind.Keyboard, DeviceKind.Keyboard, "键盘"),
             (DeviceKind.Headset, DeviceKind.Headset, "耳机"), (DeviceKind.Speaker, DeviceKind.Speaker, "音箱"),
             (DeviceKind.Gamepad, DeviceKind.Gamepad, "手柄"), (DeviceKind.Computer, DeviceKind.Computer, "电脑"),
+            (DeviceKind.Phone, DeviceKind.Phone, "手机"), (DeviceKind.Tablet, DeviceKind.Tablet, "平板"),
+            (DeviceKind.Watch, DeviceKind.Watch, "手表"),
         };
+        // 行数由选项数推出来：以后再加图标只要往 options 里追加，不用动布局
+        for (int i = 0; i < (options.Length + iconColumns - 1) / iconColumns; i++)
+            iconGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var primaryBrush = Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush;
         var iconColor = primaryBrush?.Color ?? Color.FromArgb(255, 80, 80, 80);
         Brush GetBrush(string key, Brush fallback) =>
@@ -220,8 +273,8 @@ public sealed partial class DevicesPage : Page
                 UpdateIconChoiceCards();
             };
             iconChoices.Add((radio, card));
-            Grid.SetColumn(radio, i % 4);
-            Grid.SetRow(radio, i / 4);
+            Grid.SetColumn(radio, i % iconColumns);
+            Grid.SetRow(radio, i / iconColumns);
             iconGrid.Children.Add(radio);
         }
 
@@ -306,6 +359,16 @@ public sealed partial class DevicesPage : Page
         };
         customize.Click += CustomizeDevice_Click;
         menu.Items.Add(customize);
+
+        // 忽略对在线设备也开放：直连电源的设备永远在线，"删除"那条路永远走不到（issue #52）
+        var ignore = new MenuFlyoutItem
+        {
+            Text = "忽略此设备（不在列表显示）",
+            Tag = model.Id,
+        };
+        ignore.Click += IgnoreDevice_Click;
+        menu.Items.Add(ignore);
+
         menu.Items.Add(new MenuFlyoutSeparator());
 
         // 在线设备不给删：删了插件下一轮又报回来，等于什么都没做
@@ -415,7 +478,46 @@ public sealed partial class DevicesPage : Page
         Refresh();
     }
 
+    private void IgnoreDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem item || item.Tag is not string id) return;
+        // 可逆操作不弹确认框：底部「已忽略 N 台设备」就是恢复入口
+        if (!App.Services.Manager.IgnoreDevice(id))
+        {
+            _ = ShowMessageAsync("无法忽略", "设置写入失败，未忽略该设备。");
+            return;
+        }
+        Refresh();
+    }
+
     private async void ManageBlocked_Click(object sender, RoutedEventArgs e)
+        => await ShowManagedDialogAsync(
+            "已屏蔽的设备",
+            "没有已屏蔽的设备。",
+            () => App.Services.Manager.BlockedDevices
+                .Select(kv => (kv.Id, kv.Info.Name, kv.Info.BlockedAt, "屏蔽于")).ToList(),
+            "解除",
+            App.Services.Manager.UnblockDevice,
+            "解除失败：设置写入失败，未解除屏蔽。");
+
+    private async void ManageIgnored_Click(object sender, RoutedEventArgs e)
+        => await ShowManagedDialogAsync(
+            "已忽略的设备",
+            "没有已忽略的设备。",
+            () => App.Services.Manager.IgnoredDevices
+                .Select(kv => (kv.Id, kv.Info.Name, kv.Info.IgnoredAt, "忽略于")).ToList(),
+            "恢复",
+            App.Services.Manager.UnignoreDevice,
+            "恢复失败：设置写入失败，未恢复该设备。");
+
+    /// <summary>「已忽略 / 已屏蔽」共用一套列表：两份名单只差标题、时间前缀和动作，抄两份早晚会改漏一边。</summary>
+    private async Task ShowManagedDialogAsync(
+        string title,
+        string emptyText,
+        Func<IReadOnlyList<(string Id, string Name, DateTimeOffset At, string AtLabel)>> provider,
+        string actionLabel,
+        Func<string, bool> action,
+        string failureText)
     {
         var panel = new StackPanel { Spacing = 10 };
         // 失败提示只能写在框里：ContentDialog 同一 XamlRoot 同时只允许开一个，这里再弹一个会直接抛
@@ -430,7 +532,7 @@ public sealed partial class DevicesPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "已屏蔽的设备",
+            Title = title,
             Content = root,
             CloseButtonText = "关闭",
         };
@@ -438,15 +540,15 @@ public sealed partial class DevicesPage : Page
         void Rebuild()
         {
             panel.Children.Clear();
-            var items = App.Services.Manager.BlockedDevices;
+            var items = provider();
             if (items.Count == 0)
             {
-                panel.Children.Add(new TextBlock { Text = "没有已屏蔽的设备。" });
+                panel.Children.Add(new TextBlock { Text = emptyText });
                 return;
             }
 
             var tertiary = Application.Current.Resources["TextFillColorTertiaryBrush"] as Brush;
-            foreach (var (id, info) in items)
+            foreach (var (id, name, at, atLabel) in items)
             {
                 var row = new Grid { ColumnSpacing = 12 };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -455,30 +557,30 @@ public sealed partial class DevicesPage : Page
                 var text = new StackPanel { Spacing = 2 };
                 text.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(info.Name) ? id : info.Name,
+                    Text = string.IsNullOrWhiteSpace(name) ? id : name,
                     FontSize = 14,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                 });
                 text.Children.Add(new TextBlock
                 {
-                    Text = $"屏蔽于 {info.BlockedAt:yyyy-MM-dd HH:mm}",
+                    Text = $"{atLabel} {at:yyyy-MM-dd HH:mm}",
                     FontSize = 11,
                     Foreground = tertiary,
                 });
                 row.Children.Add(text);
 
-                var unblock = new HyperlinkButton
+                var button = new HyperlinkButton
                 {
-                    Content = "解除",
+                    Content = actionLabel,
                     Tag = id,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
-                unblock.Click += (s, _) =>
+                button.Click += (s, _) =>
                 {
-                    if (s is not HyperlinkButton button || button.Tag is not string target) return;
-                    if (!App.Services.Manager.UnblockDevice(target))
+                    if (s is not HyperlinkButton clicked || clicked.Tag is not string target) return;
+                    if (!action(target))
                     {
-                        status.Text = "解除失败：设置写入失败，未解除屏蔽。";
+                        status.Text = failureText;
                         status.Visibility = Visibility.Visible;
                         return;
                     }
@@ -486,8 +588,8 @@ public sealed partial class DevicesPage : Page
                     Rebuild();
                     Refresh();
                 };
-                Grid.SetColumn(unblock, 1);
-                row.Children.Add(unblock);
+                Grid.SetColumn(button, 1);
+                row.Children.Add(button);
 
                 panel.Children.Add(row);
             }

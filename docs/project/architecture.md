@@ -33,11 +33,13 @@ VigilWatt.sln
 │   │   ├── Inphic/                    # 英菲克 report 0x03 被动状态帧
 │   │   ├── Hecate/                    # HECATE report 0x04 被动状态帧
 │   │   ├── Delux/                     # DELUX 0x000A 被动状态帧
-│   │   ├── Aula/                      # AULA F99 Pro：复用 0x13 会话帧，默认关
+│   │   ├── Aula/                      # F99 Pro 0x13 会话 + HERO 68 Air Bytech 8K 分片，共用品牌开关，默认关
+│   │   ├── Akg/                       # N9 Hybrid RACE 固定查询 + 控制输入读取，默认关
 │   │   └── Sony/                      # DualSense 蓝牙 HID 只读电量
 │   ├── Models/DeviceStatus            # 统一设备状态快照（Id/电量/充电/在线）
 │   ├── Settings/AppSettings           # settings.json 读写
 │   ├── Storage/HistoryStore           # SQLite（Microsoft.Data.Sqlite）：写入/查询/按设备删除/VACUUM
+│   ├── Capture/                       # 设备诊断：USB/HID 只读采集（模型/分析/报告/打包/存储 + Hid 采集层）
 │   ├── Utils/LogLevel                 # 日志级别枚举（Debug<Info<Warn<Error + Off 哨兵）与名称解析
 │   └── Utils/Log                      # 分级文本日志：%LOCALAPPDATA%\VigilWatt\logs\app-yyyy-MM-dd.log（按日分文件，详见 dev/logging.md）
 └── src/VigilWatt.App/             # WinUI 3 前端（net8.0-windows10.0.19041.0，非打包）
@@ -92,6 +94,7 @@ DeviceManager.Upsert() 是唯一的状态汇聚点（BLE 和插件都汇到它�
 | **删除历史后立即 VACUUM** | SQLite 的 `DELETE` 只把页标成空闲、**不缩小文件**；不 VACUUM 的话用户删完看到文件大小没变，会以为删除没生效。删除是低频操作，VACUUM 的整库重写开销可接受 |
 | **HistoryStore 支持注入库路径** | `HistoryStore(dbPath)` 可选参数让单测指向临时库，使删除/统计逻辑能进纯 net8.0 测试项目跑真 SQLite（不碰真实 history.db） |
 | **统一 DeviceStatus.Id** | BLE=蓝牙地址、2.4G=**端口无关键**哈希（`mchose:{StableHash(StableDeviceKey)}`，换 USB 口不变，见 `code-flow.md` §2.2）。改协议或改身份规则后设备 ID 会变（旧曲线对不上新 ID）——历史库里同时存在 `mchose:D78E…`（错误时代）和 `mchose:0F60…`（现在）即此原因 |
+| **采集引擎与适配器解耦** | 未知设备没有适配器也要能采证据，所以 `CaptureSession` 只依赖 `ICaptureSource`，与 `IBatteryPlugin` 无关；`Capture/Hid/` 是唯一碰 `hid.dll` 的一层，其余零 Win32 才能链进单测（R8）。详见 `capture.md` |
 | **非打包部署（WindowsPackageType=None + SelfContained）** | 免安装免签名，双击就跑；代价是要自己带 Windows App SDK 运行时（`publish/` 已含） |
 
 ## 4. 线程模型

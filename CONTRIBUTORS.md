@@ -6,13 +6,21 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 
 | 贡献者 | 贡献内容 | 关联 |
 |---|---|---|
-| **dotisland** | HECATE G5M Pro 只读电量插件（`35BB:D00B` 被动 report `0x04`）；拔出设备后把离线状态交回设备列表 | [PR #13](https://github.com/evren-oct/vigil-watt/pull/13) |
+| **endermiteDOTcn** | AULA HERO 68 Air 2.4G 电量与充电支持、AKG N9 Hybrid 接收器电量支持；协议研究、真机验证与回归测试 | [PR #44](https://github.com/evren-oct/vigil-watt/pull/44) |
+| **dotisland** | HECATE G5M Pro 只读电量插件（`35BB:D00B` 被动 report `0x04`）；拔出设备后把离线状态交回设备列表；BLE 端点补全缓存名、设备列表电量列右对齐 | [PR #13](https://github.com/evren-oct/vigil-watt/pull/13) · [PR #14](https://github.com/evren-oct/vigil-watt/pull/14) |
 | **Baron77777** | AULA F99 Pro（`3554:FA09`，`0x13` 会话/推送）与 DELUX M900 Pro（`1D57:FA65`，被动 5 字节状态帧）两个插件 | [PR #16](https://github.com/evren-oct/vigil-watt/pull/16) |
 | **luze258** | 三台设备：DualSense 蓝牙电量（report `0x31` + CRC）、GANSS GS3104T-Pro（33 字节查询帧）、MCHOSE V9 Pro 耳机（64 字节查询帧）；以及 GANSS 认领判据的风险分析 | [PR #15](https://github.com/evren-oct/vigil-watt/pull/15) |
 | **zi-ha** | 迈从鼠标 V2（A7 V2 Pro `3837:100A`）与 G87 V2（`3837:201B`）支持；按协议区分键鼠图标的 `ResolveKind`；用官方密码表识别型号 | [PR #17](https://github.com/evren-oct/vigil-watt/pull/17) |
 | **haihuang0506** | 迈从 K7 V2 Ultra+（`3837:1018`）支持：`0x0900` 查询 + `0x0600` 事件协议；从官方 M HUB 运行时 JS 取出帧构造与解析，真机验证 | [PR #33](https://github.com/evren-oct/vigil-watt/pull/33) |
+| **hjc3094893379** | 迈从 G3 V2（`3837:4245`）支持：Gmouse 主动查询协议（65 字节 `00 55 30 A5…` 查询帧，应答前缀 `AA 30`），真机验证 | [PR #38](https://github.com/evren-oct/vigil-watt/pull/38) |
 | **KNA7022** | 黑爵 AK870（`3151:4011`，feature `F7` 状态查询）与雷神 ML903 NearLink Se（`369B:0234`，`0xA0` 设备信息 TLV）两个插件 | [PR #25](https://github.com/evren-oct/vigil-watt/pull/25) |
 | **shengzhi233** | CHERRY PIXIU75（`046A:01E4`，64 字节块协议，块 `0x1A` 取电量 + 充电位）与派世 Pulsar X2 V2（`3554:F508`，17 字节 STATUS/POWER）两个插件 | [PR #36](https://github.com/evren-oct/vigil-watt/pull/36) |
+| **Mutsuki233** | 罗技 PRO X 2 LIGHTSPEED 耳机（`046D:0AF7`）：提供设备信息与 2.4G / 蓝牙真机验证，Centurion 只读电量与蓝牙显示名适配 | [PR #45](https://github.com/evren-oct/vigil-watt/pull/45) |
+| **imx1n** | 雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体，经典 90 字节 feature 协议）与索尼 INZONE H9 II（`054C:0FA8`，`0xFF04` 控制传输查询）两个插件 | [PR #54](https://github.com/evren-oct/vigil-watt/pull/54) |
+| **k1ky0** | 寸渊影弑耳机与官方驱动抢占用修复（`OfficialAppGuard`：检测到 `DARKRIM.exe` 就不认领，官方退出后自动恢复），以及盖世小鸡解析失败诊断 | [PR #43](https://github.com/evren-oct/vigil-watt/pull/43) |
+| **Delitriuz** | HECATE G3M Pro 升级版（接收器 `35BB:D3FB`，17 字节 `0xFF02` 通道，STATUS `08 03` / POWER `08 04`）插件，并给出 Kysona 内核驱动出处与 10 分钟被动监听结论 | [PR #49](https://github.com/evren-oct/vigil-watt/pull/49) |
+| **Gpan666** | 历史库时间戳时区修正：`HistoryStore` 读库时把 UTC 毫秒转本地时区，离线设备「更新于」不再少 8 小时 | [PR #50](https://github.com/evren-oct/vigil-watt/pull/50) |
+| **mofeng816** | ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`，`FF02` 口 17 字节查询帧）与 HyperX Cloud Flight 2（`03F0:0AC1`，`FF90` 口被动推送帧）两个插件，含协议分析、编解码单测与真机验证 | [PR #48](https://github.com/evren-oct/vigil-watt/pull/48) |
 
 ## 还能怎么帮
 
