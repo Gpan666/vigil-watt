@@ -20,6 +20,7 @@
 - **合并 #53**：接入凌豹 M5PRO Max（`3151:402D`，feature 通道 `00 f7 00…`，命令取自官方驱动运行时抓包）与迈从 G75 Pro（`3554:FA09`）。G75 与 AULA F99 Pro 同 VID/PID、同接口指纹，改为按会话 ACK 的型号密码分流：迈从只认密码命中型号表的接收器，AULA 见到迈从型号主动让位。两个插件都默认关（会写帧）。见 `hardware/lingbao.md`、`mchose.md` §5。
 
 - **合并 #29**：凌豹 K98（`3554:FA09`，`0x13` 会话/推送）并进同一凌豹插件，一个插件同时管 M5PRO Max 鼠标与 K98 键盘（`ResolveKind` 按协议给图标）。`3554:FA09` 因此变成三方共用，AULA 改为只认型号码 `0x0158`，K98 认 `0x0212`，迈从仍认密码表；AULA 不再把 K98 显示成 F99 Pro。见 `hardware/lingbao.md` §2、`aula.md` §1.1。
+- **合并 #34（只摘 VGN 与狼蛛 F108）**：接入 VGN 蜻蜓 F1 V5 Turbo+（kc2 配置帧 `0x06`，电量在 `payload[19]`）与 F2 大师+（y2 `BatteryLevel` 查询，`3554:FB56`）；插线后接收器与本体两条接口同时在场，按序列号只留带充电位那条（基类新增 `SkipPathsForThisPass` 钩子）。狼蛛 F108 Pro 与 GANSS GS3104T-Pro 在 HID 层完全同指纹，不另开插件，改为按产品名分品牌、共用一个开关。**未纳入**：K7（已由 #33 合入）、安装位置向导与 MSI、`publish-github.ps1`、展示层去重、贴片设备筛选、`tools/battcheck`。见 `hardware/vgn.md`、`ganss.md` §7。
 
 ## 2026-10-24
 

@@ -165,6 +165,13 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// </summary>
     protected virtual TimeSpan AnomalyPersistWindow => TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// 把「同一物理设备的另一条接口」从本轮摘掉：插线后接收器与本体两条都在场，都认领会变成两行矛盾读数。
+    /// 返回要跳过的接口路径；默认不跳过。
+    /// </summary>
+    protected virtual IReadOnlyCollection<string> SkipPathsForThisPass(
+        IReadOnlyList<HidDeviceInfo> availableDevices) => Array.Empty<string>();
+
     private readonly Dictionary<string, TrackedDevice> _devices = new();   // key = DevicePath
     private readonly Dictionary<string, DateTimeOffset> _probeFailedAt = new();
     private DeviceClaimRegistry _claims = null!;
@@ -175,10 +182,24 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         _claims = claims;
         var claimed = new List<DeviceStatus>();
 
+        // 同一物理设备的多接口合并：先释放被跳过的接口，否则它会一直留在列表里当第二行。
+        var skipPaths = SkipPathsForThisPass(availableDevices);
+        var skipSet = new HashSet<string>(skipPaths, StringComparer.OrdinalIgnoreCase);
+        foreach (var path in skipSet)
+        {
+            if (!_devices.Remove(path, out var dropped)) continue;
+            StopPassiveListen(dropped);
+            dropped.Handle.Dispose();
+            dropped.Status.IsOnline = false;
+            _claims.Release(path, Name);
+            Log.Info($"{DisplayName} 同一设备的另一条接口已接管，释放: {path}");
+        }
+
         // 第一遍（快）：已有设备直接返回；筛出本轮需要新探测的接口（冷却中/被他人认领的跳过）
         var toProbe = new List<HidDeviceInfo>();
         foreach (var info in availableDevices)
         {
+            if (skipSet.Contains(info.DevicePath)) continue;
             if (!IsCandidate(info)) continue;
 
             // 永久移除的设备：连句柄都不开、帧也不发。只挡 Upsert 的话，插件照样会写帧。

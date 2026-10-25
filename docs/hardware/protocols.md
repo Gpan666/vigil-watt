@@ -25,6 +25,9 @@
 | AULA | HERO 68 Air（2.4G） | `372E:106C` + UUID `12000000000A` | [aula.md](aula.md) §2 | 贡献者真机 10% 放电/充电 |
 | AKG | N9 Hybrid（接收器） | `0ECB:20D9` | [akg.md](akg.md) | 贡献者真机 50%；充电状态未知 |
 | 凌豹 LINGBAO | K98 键盘（与 AULA 共用 `3554:FA09`） | `3554:FA09` | [lingbao.md](lingbao.md) §2 | 贡献者真机 100% |
+| VGN 蜻蜓 | F1 V5 Turbo+（2.4G / 有线） | `391D:1A23` / `1026` | [vgn.md](vgn.md) §1 | 贡献者真机 |
+| VGN 蜻蜓 | F2 大师+（接收器 / 有线） | `3554:FB56` / `FB57` | [vgn.md](vgn.md) §2 | 贡献者真机 80% |
+| 狼蛛 AULA | F108 Pro（与 GANSS 同指纹，按产品名分品牌） | `05AC:024F` | [ganss.md](ganss.md) §7 | 贡献者真机 |
 | 索尼 | DualSense 蓝牙 | `054C:0CE6` | [dualsense.md](dualsense.md) | 贡献者真机 |
 | GANSS | GS3104T-Pro | `05AC:024F` | [ganss.md](ganss.md) | 贡献者真机 |
 | CHERRY | PIXIU75（2.4G / 有线） | `046A:01E4` / `01E2` | [cherry.md](cherry.md) | 贡献者真机 |

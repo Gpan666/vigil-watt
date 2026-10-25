@@ -78,9 +78,10 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | AKG N9 Hybrid · RACE battery query over USB receiver | Off by default; contributor verified 50%; charging state unknown |
 | LINGBAO M5PRO Max (`3151:402D`) · vendor-driver `F7` status query | Implemented, off by default; writes frames. Contributor verified 88%/95%, not retested here |
 | LINGBAO K98 (`3554:FA09`) · `0x13` session/push | Implemented, off by default; shares VID/PID with AULA, split by session model code `0x0212`. Contributor hardware only |
+| VGN Dragonfly F1 V5 Turbo+ / F2 Master+ · kc2 config frame / y2 battery query | Implemented, off by default; writes frames. Wired duplicates dropped by serial number. Contributor hardware only |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
-| GANSS GS3104T-Pro · 33-byte query frame | Implemented, off by default; writes frames. Contributor hardware only |
+| GANSS GS3104T-Pro / LINGBAO F108 Pro · 33-byte query frame | Implemented, off by default; writes frames. Same HID fingerprint, one shared switch. Contributor hardware only |
 | MCHOSE V9 Pro headset · 64-byte query frame | Implemented, off by default; writes frames, shares the MCHOSE switch. Contributor hardware only |
 | CHERRY PIXIU75 · 64-byte block protocol (block `0x1A`) | Implemented, off by default; writes frames. Contributor hardware only |
 | Pulsar X2 V2 · 17-byte STATUS/POWER | Implemented, off by default; writes frames. Contributor hardware only |

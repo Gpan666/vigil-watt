@@ -1,9 +1,9 @@
 namespace VigilWatt.Core.Plugins.Ganss;
 
 /// <summary>
-/// 功 能： GS3104T-Pro 已验证电量报文的构造与解析。
-/// 2026/10/19 19:45:00 xliu
-/// 协议与验证范围见 docs/hardware/ganss.md。
+/// 功 能： 0x05AC:024F + 0xFF60/0x0061 + 33 字节这一族键盘的电量报文构造与解析（GANSS GS3104T-Pro / 狼蛛 F108 Pro）。
+/// 2026/10/19 19:45:00 xliu；2026/10/21 扩展 F108 Pro（同硅方案，只差产品名）。
+/// 协议与验证范围见 docs/hardware/ganss.md；两品牌同指纹的陷阱见 docs/hardware/protocols.md §2。
 /// </summary>
 public static class GanssCodec
 {
@@ -19,16 +19,23 @@ public static class GanssCodec
            && usagePage == 0xFF60 && usage == 0x0061
            && inputLength == HidReportLength && outputLength == HidReportLength
            && reportId == 0
-           && (IsCapturedInterfaceIndex(path) || LooksLikeGanss(product));
+           && (IsCapturedInterfaceIndex(path) || LooksLikeGanss(product) || LooksLikeAulaF108(product));
 
     /// <summary>贡献者机器上电量集合固定在 mi_03；换固件或批次可能变，所以只当证据之一，不当唯一依据。</summary>
     public static bool IsCapturedInterfaceIndex(string path)
         => path.Contains("&mi_03#", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>狼蛛 F108 Pro 自报的产品名含这个串（本机实测 <c>F108Pro Dongle</c>）。</summary>
+    public const string AulaProductHint = "F108";
+
     /// <summary>接收器自报的产品名含品牌名时，接口编号漂移也认领（产品名是设备自己声明的身份）。</summary>
     public static bool LooksLikeGanss(string product)
         => product.Contains("GANSS", StringComparison.OrdinalIgnoreCase)
            || product.Contains("GS3104", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>狼蛛 F108 Pro 与 GS3104T-Pro 在 HID 层完全同指纹，品牌识别只剩产品名这一条路。</summary>
+    public static bool LooksLikeAulaF108(string product)
+        => product.Contains(AulaProductHint, StringComparison.OrdinalIgnoreCase);
 
     public static byte[] CreateQuery()
     {
