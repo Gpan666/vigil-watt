@@ -17,6 +17,8 @@
 
 - **合并 #47**：HECATE G5M Pro 改主动查询（`04 00 00 1A`），电量不再依赖 HECATE Connect，离线改按连续 3 次查询无应答判（GANSS 同款）。**行为变更**：`Hecate` 开关默认由开改为关，老用户需在设置页手动打开；不进 15 秒发现档。收口时保留了 #49 的 `hecate.md` §2（PR 原本会整段删掉 D3FB 接收器协议，已顺延为 §3），并去掉 `WritesEnabled` 硬编码，回到「插件开关即写入授权」。见 `hardware/hecate.md` §3。
 
+- **合并 #53**：接入凌豹 M5PRO Max（`3151:402D`，feature 通道 `00 f7 00…`，命令取自官方驱动运行时抓包）与迈从 G75 Pro（`3554:FA09`）。G75 与 AULA F99 Pro 同 VID/PID、同接口指纹，改为按会话 ACK 的型号密码分流：迈从只认密码命中型号表的接收器，AULA 见到迈从型号主动让位。两个插件都默认关（会写帧）。见 `hardware/lingbao.md`、`mchose.md` §5。
+
 ## 2026-10-24
 
 - **采集支持「手动发帧」（唯一写入路径）**：会话型通道（迈从 `0x13` 等）要主机先发帧才回，纯被动只能看到应答、看不到请求，写不出适配器。现在开始前勾「允许向设备发送」，该会话才以读写方式打开句柄（`OpenReadWrite`），运行态出现「手动发帧」卡片；每次发送有二次确认，帧写进 `records.jsonl`（`layer=hid-api-output`、`status=sent`），记录列表用 `→` + 「发出」标方向。长度与 report ID 先按 caps 校验。**不勾选时句柄仍只有 `GENERIC_READ`，从权限层面写不了。** 顺带修 `FailedRecords` 原来按「总数-收到」算、会把主机发出的帧算成失败。
@@ -229,11 +231,6 @@
 
 - 修「点几次保存后进程直接退出」：受限令牌下写 `HKCU\Run` 抛 `UnauthorizedAccessException`，异常从 `Save_Click` 逸出、被全局熔断器累计 5 次后放行退出。`AutostartService` 改为 `TrySetEnabled(out error)` 内部收口，失败只弹「开机自启未生效」，其余设置照常保存。
 - **定案「没托盘 / 贴片跑到原点 / 保存失败」的真因**：工作区目录带 `Low` 完整性标签，构建出的 exe 继承它，进程以 Low IL 运行，写不了 Medium 的用户目录与 HKCU、也发不了 shell 消息。csproj 构建后自动 `icacls /setintegritylevel Medium`，`run-app.ps1` 再兜一次；启动日志新增 `进程身份`（含 `完整性=`）一行。见 `dev/runtime-pitfalls.md` §20。
-
-## 2026-10-25
-
-- 扩展雷蛇插件：接入 Viper V3 Pro SE 与 BlackShark V2 Pro 2023，保留上游 V4 支持；新型号每轮交替查询电量和充电，沿用 15 秒发现。协议见 `hardware/razer-viper-se.md`、`hardware/razer-headset.md`。
-- 新增 Scope II 96 / Omni 键盘，先按同一物理接收器核实配对身份；补齐 Feature 专用访问及按接口选择低电量下界，品牌开关默认关闭。审查见 `reviews/archive/2026-10-25-asus-razer-adaptation-review.md`。
 
 ## 版本
 
