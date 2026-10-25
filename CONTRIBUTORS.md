@@ -20,6 +20,7 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 | **k1ky0** | 寸渊影弑耳机与官方驱动抢占用修复（`OfficialAppGuard`：检测到 `DARKRIM.exe` 就不认领，官方退出后自动恢复），以及盖世小鸡解析失败诊断 | [PR #43](https://github.com/evren-oct/vigil-watt/pull/43) |
 | **Delitriuz** | HECATE G3M Pro 升级版（接收器 `35BB:D3FB`，17 字节 `0xFF02` 通道，STATUS `08 03` / POWER `08 04`）插件，并给出 Kysona 内核驱动出处与 10 分钟被动监听结论 | [PR #49](https://github.com/evren-oct/vigil-watt/pull/49) |
 | **Gpan666** | 历史库时间戳时区修正：`HistoryStore` 读库时把 UTC 毫秒转本地时区，离线设备「更新于」不再少 8 小时 | [PR #50](https://github.com/evren-oct/vigil-watt/pull/50) |
+| **mofeng816** | ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`，`FF02` 口 17 字节查询帧）与 HyperX Cloud Flight 2（`03F0:0AC1`，`FF90` 口被动推送帧）两个插件，含协议分析、编解码单测与真机验证 | [PR #48](https://github.com/evren-oct/vigil-watt/pull/48) |
 
 ## 还能怎么帮
 

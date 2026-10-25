@@ -3,6 +3,10 @@
 > 社区改动收进本仓库时记一笔：谁、哪个 PR、收了什么、没收什么。协议细节留在专题文档。
 > **面向用户的名单在根目录 [CONTRIBUTORS.md](../../CONTRIBUTORS.md)**（只写"谁做了什么"）；本文只记收了什么、没收到什么、是否本机复测，两处不重复。
 
+## 2026-10-25
+
+- **mofeng816**（[#48](https://github.com/evren-oct/vigil-watt/pull/48)，目标 `dev`）：纳入 ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`）与 HyperX Cloud Flight 2 耳机（`03F0:0AC1`）两个品牌插件——`AtkCodec` / `AtkPlugin`、`Cf2Codec` / `HyperXPlugin`，附 `atk.md`、`hyperx-cf2.md` 两份协议文档、`sources.md` 来源与许可边界、`safety.md` §3.1 开关现状、`protocols.md` 品牌索引、README 中英设备表，以及 23 条编解码用例。ATK 是主动查询（`FF02` 口 17 字节 `08 04 …49`），**默认关**，响应必须过运行时校验和才采信（否则固件混发的普通鼠标报文会被读成假读数），接口长度另作一层判据；HyperX 是纯被动（`FF90` 口推送帧），**默认开、零写入**，充电态只认插拔事件帧。基类改动仅 1 行：`IdFor` 由 `protected` 改 `protected virtual`，供 ATK 把接收器与有线本体归一成同一条设备记录（默认实现不变）。**未纳入**项：无，该 PR 只含这两个品牌的三台设备，无临时探针、独立工程或厂商源码。**本机无这两台设备，未真机复测**；合入前构建 0 警告 0 错误，`AtkCodecTests` / `Cf2CodecTests` 23 项与全量 888 项（1 跳过）单测通过。已知边界记 CR-98（显示名依赖本体、进程重启后丢失）与 CR-99（配对表硬编码，新 PID 需补行）。
+
 ## 2026-10-23
 
 - **endermiteDOTcn**（[#44](https://github.com/evren-oct/vigil-watt/pull/44)，目标 `dev`）：纳入 AULA HERO 68 Air 2.4G 电量/充电支持与 AKG N9 Hybrid 接收器电量支持，以及协议文档、来源记录和必要回归测试。两者继承 `BatteryPluginBase`，共用各自品牌开关，默认关闭。贡献者真机验证 HERO 68 Air 10% 放电/充电及插件认领、轮询；N9 的 Python 与 C# 查询见 50%，随后真实 DeviceManager 首次认领加五轮自然查询均读到 100%，原始证据见 `hardware/akg.md` §3，上游维护者尚未真机复测。N9 充电时无法工作为用户观察，充电测试已取消，状态保持 Unknown。未纳入其它连接方式、其它型号，也不包含临时探针、独立验证工程、独立日志或厂商源码；必要日志片段保留在协议文档。2026-10-25 已合入 `dev`（`a15d509`）；本机无这两台设备，未真机复测，合入前构建 0 警告 0 错误，`AkgN9` / `AulaHero68` / `AulaProtocol` 60 项与离线策略等基类回归 44 项单测通过。

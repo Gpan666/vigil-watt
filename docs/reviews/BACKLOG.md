@@ -42,6 +42,8 @@
 | **CR-94** | 迈从 G3 V2 的 `mi_01&col05`（`0xFF06/0x0002`，64/64）不是命令通道，却按"≥60 字节只走鼠标"落 `MouseV2` 兜底：每 15 秒发现拍点被写 1 条 `0x11/0x06` 触发帧并阻塞约 6 秒（3 秒被动监听 ×2）。建议对已知 Gmouse PID 的非命令厂商接口返回 `None`，或只被动听不写 | `Plugins/Mchose/MchoseInterfaceClassifier.cs:Classify`、`Plugins/Mchose/MchosePlugin.cs:TryMouseV2`；接口地图见 `docs/hardware/mchose.md` §4.1、§4.5 | `open` |
 | **CR-95** | 采集的 `ReadFailed` 是死枚举：`ReadInputAsync` 把读异常吞成 `null`，USB/HID 来源分不清「超时」和「读失败」，只剩 2 秒一次的 `IsPresent()` 兜底。要修得给 `HidDeviceHandle` 加错误回调或结果类型（会影响全部插件调用方），故单独一轮 | `Capture/UsbHidCaptureSource.cs:PumpAsync`、`Hid/HidDeviceInfo.cs:ReadInputAsync`（capture.md §8） | `open` |
 | **CR-96** | 采集句柄的释放不保证：`UsbHidCaptureSource.Dispose()` 是空实现，句柄在 `RunAsync` 的 `using` 里；pump 卡在同步 `HidD_GetFeature` 时，「暂停 = 释放句柄」不成立，`StopSourceAsync` 3 秒超时后来源仍在跑 | `Capture/Hid/UsbHidCaptureSource.cs:RunAsync`、`Capture/CaptureSession.cs:StopSourceAsync` | `open` |
+| **CR-98** | ATK 显示名依赖本体：接收器只报通用名 `Wireless mouse 8k dongle-M`，型号只能从插线时枚举出的本体取，`ModelNames` 是进程内缓存 → 重启后名字退回通用名，要再插一次线或用户自定义改名才恢复 | `Plugins/Atk/AtkPlugin.cs:BuildDisplayName`、`Plugins/Atk/AtkPlugin.cs:ModelNames`（atk.md §4.1） | `open` |
+| **CR-99** | ATK 设备归一组是硬编码配对表（`101B`/`101A`/`1015` → promax、`1303`/`12A9` → v3），新 PID 必须补一行；未登记 PID 在插充电线时会多出一条记录（上游路径哈希行为）。同机两只同型号鼠标会被并成一条，与 CR-74 同源 | `Plugins/Atk/AtkPlugin.cs:DeviceGroups`（atk.md §4） | `open` |
 
 ## 重构候选（未做）
 

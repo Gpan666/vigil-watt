@@ -11,6 +11,8 @@
 
 - **收口 #44**：`handoff.md` §2 补 HERO 68 Air 与 AKG N9 Hybrid 两行设备表、§1 删掉 PR 过程话，`contributions.md` 去掉「待合入」，`protocols.md` 品牌索引补两行。
 
+- **合并 #48**：接入 ATK 无线鼠标（F1 Pro Max / F1 V3 ULTIMATE+，3 个接收器 PID + 2 个本体 PID）与 HyperX Cloud Flight 2 耳机。ATK 走 `FF02` 口 17 字节主动查询、默认关，响应须过运行时校验和才采信；HyperX 只听 `FF90` 推送、零写入、默认开。设备 ID 按实测配对表归一，接收器与本体共一条、两只鼠标互不合并。见 `hardware/atk.md`、`hardware/hyperx-cf2.md`。
+
 ## 2026-10-24
 
 - **采集支持「手动发帧」（唯一写入路径）**：会话型通道（迈从 `0x13` 等）要主机先发帧才回，纯被动只能看到应答、看不到请求，写不出适配器。现在开始前勾「允许向设备发送」，该会话才以读写方式打开句柄（`OpenReadWrite`），运行态出现「手动发帧」卡片；每次发送有二次确认，帧写进 `records.jsonl`（`layer=hid-api-output`、`status=sent`），记录列表用 `→` + 「发出」标方向。长度与 report ID 先按 caps 校验。**不勾选时句柄仍只有 `GENERIC_READ`，从权限层面写不了。** 顺带修 `FailedRecords` 原来按「总数-收到」算、会把主机发出的帧算成失败。
