@@ -8,7 +8,7 @@
 
 当前安装包 **1.2.3**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
 
-本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）、罗技 Bolt 接收器（C548）+ MX Master 3S。本机电量可选，默认关。弱水时砂 2.4G 无电量通道，不再投入。**其余机型均为贡献者真机、本机未复测，逐台状态见 §2 表**——别把 §2 里「贡献者真机」当成我们验过。
+本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）、罗技 Bolt 接收器（C548）+ MX Master 3S。本机电量可选，默认关。**其余机型均为贡献者真机、本机未复测，逐台状态见 §2 表**——别把 §2 里「贡献者真机」当成我们验过。
 
 任务栏贴片是原生子窗口 `Services/TaskbarPillWindow.cs`（`SetParent` 进 `Shell_TrayWnd`），不是 WinUI 覆盖窗；小组件仍用 `TransparentWindowSurface`，Win10 上因此没有 DWM 投影（CR-57）。**拖动走 16ms 轮询，不靠鼠标捕获**——捕获对非前台窗口无效（`dev/runtime-pitfalls.md` §16、§16.5.1；§17 只对小组件）。选屏由 `Services/TaskbarPillManager.cs` 每秒按 `monitorDevicePath` 匹配，配置的屏不在就降级贴主屏，设置页显示真实屏幕名——`\\.\DISPLAYn` 是配置序号不是身份，见 `dev/monitor-identity.md`。
 
@@ -20,7 +20,7 @@
 
 设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
-PR #44 指向 `dev`（2026-10-24），沿用 `feat/aula-hero68-air`。`c3ce47e` 独立编译版经用户界面实测超过十分钟正常，现已关闭；修复、五轮日志及充电测试取消说明已[回复维护者](https://github.com/evren-oct/vigil-watt/pull/44#issuecomment-6379044906)。两个品牌均继承 `BatteryPluginBase`，主动通信默认关闭，不进每 15 秒常规发现。HERO 68 Air 已验证 10% 放电/充电，维护者认可可合入；AKG N9 已见 50% / 100%，充电未知。用户观察 AKG 充电时无法工作并取消该测试。协议与验证边界见 `hardware/aula.md`、`hardware/akg.md`，后续项 CR-81/84/97；[维护者原文](https://github.com/evren-oct/vigil-watt/pull/44#issuecomment-6368872663)。
+`#44` 已合入（2026-10-25）：HERO 68 Air 与 AKG N9 Hybrid 均继承 `BatteryPluginBase`、默认关、不进 15 秒常规发现；两台都是贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，HERO 传输层测试见 CR-97；协议与验证边界见 `hardware/aula.md` §2、`hardware/akg.md`。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
@@ -48,7 +48,6 @@ PR #44 指向 `dev`（2026-10-24），沿用 `feat/aula-hero68-air`。`c3ce47e` 
 | 盖世小鸡 G7 Pro CE（3537，usage 0xFFF0） | 心跳 `0F F2 00` 开 0x12 状态流，60 秒突发读一次 | 已打通，不依赖官方软件，**默认关**（会写心跳帧，按主动通信处理；gamesir.md §1.4） |
 | 前行者 X87 键盘（VID_0C45&PID_FEFE&MI_03） | 33 字节查询帧（0x20/0x01，校验和 [32]） | 代码已接入，默认关。会写帧。贡献者真机 100%，**本机未复测**。两型共用「前行者」开关。MI_04 是 65 字节同 usage 陷阱，只能写 MI_03（eweadn.md §1.1） |
 | 前行者 S9 鼠标（VID_372E&PID_1026） | feature report 0x03，贝盈 beiyin_uuid | 代码已接入，默认关。会写帧。贡献者真机 72~73%，**本机未复测**。`0xFF06` 输出通道是死路（§18.2） |
-| 弱水时砂 2.4G（38FF:0001） | — | 无电量通道（rose.md），不再投入 |
 | CHERRY PIXIU75（dongle 046A:01E4 / 有线 046A:01E2） | 64 字节块通道 0xFF1C，读块 0x1A（电量 + 充电位） | 已打通，真机 48%↔官方软件一致；插线 55% + 充电中（cherry.md §1.5） |
 | 派世 Pulsar X2 V2（VID_3554&PID_F508） | 17 字节帧 `0x08`，STATUS `0x03` / POWER `0x04` | 已打通，真机 20% + 3566 mV（pulsar.md §1） |
 | 迈从 K7 V2 Ultra+（VID_3837&PID_1018） | `0x4D` 通道，`0x0900` 查询 + `0x0600` 被动事件 | 代码已接入（并入迈从插件），默认关。会写帧。贡献者真机连跑 6.5 小时（mchose.md §3） |
@@ -56,9 +55,11 @@ PR #44 指向 `dev`（2026-10-24），沿用 `feat/aula-hero68-air`。`c3ce47e` 
 | 黑爵 AK870（VID_3151&PID_4011） | feature `F7` 状态查询，`[2]` 电量 + `[4]` 在线 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
 | 雷神 ML903 NearLink Se（VID_369B&PID_0234） | `0xA0` 设备信息查询，TLV `0x0225` = 电量 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
 | EDIFIER W820NB | HFP 网关 `DEVPKEY_Device_BatteryLevel` | 已打通，与设置页一致 |
-| 华硕 AURA、Virtual Multitouch、lifeme 音箱 | — | 与电量无关，勿探测 |
+| 华硕 AURA、Virtual Multitouch、lifeme 音箱、弱水时砂 2.4G（38FF:0001） | — | 与电量无关 / 无电量通道（rose.md），勿探测 |
 | 雷蛇毒蝰 V4 Pro（接收器 1532:00E6 / 本体 1532:00E5） | 经典 90 字节 feature 查询 | 代码已接入，默认关、会写帧。贡献者真机 100%，本机未复测；有线模式 `0x84` 充电查询无有效应答，充电态保持 Unknown（razer.md） |
 | 索尼 INZONE H9 II（054C:0FA8） | `0xFF04` 控制传输 SET_REPORT 查询 | 代码已接入，默认关、会写帧。贡献者真机 78→94%（充电中），关掉 INZONE Hub 仍可读；本机未复测（inzone-h9.md） |
+| AULA HERO 68 Air（`372E:106C`，UUID `12000000000A`） | Bytech 8K 分片查询 + ACK | 代码已接入，默认关、会写帧，与 F99 Pro 共用 Aula 开关。贡献者真机 10% 放电/充电，本机未复测（aula.md §2） |
+| AKG N9 Hybrid（接收器 `0ECB:20D9`） | 固定 RACE 电量查询，控制输入读取 | 代码已接入，默认关、会写帧。贡献者真机 50% / 100%，充电态 Unknown，本机未复测（akg.md） |
 | 本机电池 | `GetSystemPowerStatus`，Id `sys:battery` | 已接入，默认关。托盘最低电量不统计本机 |
 
 ## 3. 历史
