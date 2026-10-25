@@ -226,6 +226,11 @@
 - 修「点几次保存后进程直接退出」：受限令牌下写 `HKCU\Run` 抛 `UnauthorizedAccessException`，异常从 `Save_Click` 逸出、被全局熔断器累计 5 次后放行退出。`AutostartService` 改为 `TrySetEnabled(out error)` 内部收口，失败只弹「开机自启未生效」，其余设置照常保存。
 - **定案「没托盘 / 贴片跑到原点 / 保存失败」的真因**：工作区目录带 `Low` 完整性标签，构建出的 exe 继承它，进程以 Low IL 运行，写不了 Medium 的用户目录与 HKCU、也发不了 shell 消息。csproj 构建后自动 `icacls /setintegritylevel Medium`，`run-app.ps1` 再兜一次；启动日志新增 `进程身份`（含 `完整性=`）一行。见 `dev/runtime-pitfalls.md` §20。
 
+## 2026-10-25
+
+- 扩展雷蛇插件：接入 Viper V3 Pro SE 与 BlackShark V2 Pro 2023，保留上游 V4 支持；新型号每轮交替查询电量和充电，沿用 15 秒发现。协议见 `hardware/razer-viper-se.md`、`hardware/razer-headset.md`。
+- 新增 Scope II 96 / Omni 键盘，先按同一物理接收器核实配对身份；补齐 Feature 专用访问及按接口选择低电量下界，品牌开关默认关闭。审查见 `reviews/archive/2026-10-25-asus-razer-adaptation-review.md`。
+
 ## 版本
 
 发新版留着上一版全量包才有 delta；清空 `dist/` 再打同版本就没有。见 `dev/build.md` §8。**1.0.11 是首个上传 Gitee Release 的版本**（1.0.10 及以前只在本地 `dist/`，故 1.0.11 的 delta 是拿本地留存的 1.0.10 全量包做基准算出来的）。

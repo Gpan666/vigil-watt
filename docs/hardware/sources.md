@@ -14,6 +14,9 @@
 | 设备 / 方案 | 来源与参考内容 | 本项目采用及验证 | 许可 / 边界 |
 |---|---|---|---|
 | AKG N9 Hybrid 接收器 | [HeadsetControl Airoha 协议](https://github.com/Sapd/HeadsetControl/blob/master/lib/devices/audeze_maxwell_device.hpp) 的 `06/07` 封装与 `0CD6` 查询；N9 真机控制输入和查询响应。 | 自行实现固定查询，限定 `0ECB:20D9` MI03 Col02；贡献者真机读取 50%，默认关闭。 | 未复制外部代码；只确认单点电量，充电状态未验证。见 [akg.md](akg.md)。 |
+| ASUS Scope II 96 / Omni | G-Helper 键盘电量协议、rigstats Omni 配对表及华硕官方兼容表。 | 独立实现身份校验与 12/01 查询；本机 95%、未充电，见 [asus-rog.md](asus-rog.md)。 | 仅使用协议事实，未复制实现代码。 |
+| Razer BlackShark V2 Pro (2023) | OpenRazer PR #2862 的 PA 格式和会话序列、HaloBattery 同型号实现。 | 独立实现；本机 79%、未充电，见 [razer-headset.md](razer-headset.md)。 | 上游驱动 GPL-2.0-or-later，PR 未合并；未复制代码。 |
+| Razer Viper V3 Pro SE 无线 | [OpenRazer](https://github.com/openrazer/openrazer) 的公开型号表、90 字节控制协议、电量与充电查询。 | 按协议事实自行编写 C#，本机 1532:00DF 短时读取成功；详见 [razer-viper-se.md](razer-viper-se.md)。 | 上游驱动 GPL-2.0-or-later；未复制驱动代码；其他型号未验证。 |
 | MCHOSE G87 旧代 dongle（report `0x13`） | 官方 M HUB 的会话与电量交互；通过官方软件抓包和 dongle 实机观测确认帧结构、校验、查询和推送。 | 按抓包与实机样本实现；本机 G87 已验证。 | 官方软件交互是协议依据，不表示引用其代码。具体帧与未定语义见 [protocols.md](protocols.md)。 |
 | MCHOSE QHW（新代 dongle） | [MCHOSE M HUB WEB](https://www.mchose.com.cn/#/home) 前端 JS 中的 `QhwCmdQueueItem`、命令表及 CZ 相关脚本。 | 按官方前端协议实现备用路径；适用于 `0x3837` 世代 dongle。当前用户设备 `41E4:2001` 不适用。 | 官方资料，非开源代码复用。入口与设备范围见 [protocols.md](protocols.md)。 |
 | Logitech HID++ 电量 | Logitech HID++ 1.0 / 2.0 的设备发现与电池特征；实时电量通知行为与 Logi Battery Dashboard 同源。 | 本项目自行实现 HID++ 报文与特征解析；Bolt + MX Master 3S 已真机验证。 | 现有协议手册未记录外部代码复用；Logi Battery Dashboard 只作为行为 / 协议线索。实现细节见 [protocols.md](protocols.md)。 |

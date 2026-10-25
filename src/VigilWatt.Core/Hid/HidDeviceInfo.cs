@@ -51,6 +51,9 @@ public sealed class HidDeviceInfo
     public HidDeviceHandle OpenReadWrite()
         => OpenCore(NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE);
 
+    /// <summary>受保护鼠标集合只允许 Feature 查询，不申请输入读写权限。</summary>
+    public HidDeviceHandle OpenFeature() => OpenCore(0);
+
     private HidDeviceHandle OpenCore(uint access)
     {
         var handle = NativeHid.CreateFileW(
@@ -59,7 +62,7 @@ public sealed class HidDeviceInfo
             NativeHid.FILE_SHARE_READ | NativeHid.FILE_SHARE_WRITE,
             IntPtr.Zero,
             NativeHid.OPEN_EXISTING,
-            NativeHid.FILE_FLAG_OVERLAPPED,
+            access == 0 ? 0 : NativeHid.FILE_FLAG_OVERLAPPED,
             IntPtr.Zero);
 
         int hr = handle.IsInvalid ? Marshal.GetHRForLastWin32Error() : 0;
@@ -72,16 +75,26 @@ public sealed class HidDeviceInfo
             };
         }
 
-        var stream = new FileStream(handle,
-            access == NativeHid.GENERIC_READ ? FileAccess.Read : FileAccess.ReadWrite, 0, isAsync: true);
-        return new HidDeviceHandle(this, stream);
+        if (access == 0) return new HidDeviceHandle(this, handle);
+        try
+        {
+            var stream = new FileStream(handle,
+                access == NativeHid.GENERIC_READ ? FileAccess.Read : FileAccess.ReadWrite, 0, isAsync: true);
+            return new HidDeviceHandle(this, stream);
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
     }
 }
 
 /// <summary>已打开的 HID 设备句柄，封装 feature/input/output 报文读写。</summary>
 public sealed class HidDeviceHandle : IDisposable
 {
-    private readonly FileStream _stream;
+    private readonly FileStream? _stream;
+    private readonly SafeFileHandle _handle;
 
     public HidDeviceInfo Info { get; }
 
@@ -89,6 +102,13 @@ public sealed class HidDeviceHandle : IDisposable
     {
         Info = info;
         _stream = stream;
+        _handle = stream.SafeFileHandle;
+    }
+
+    internal HidDeviceHandle(HidDeviceInfo info, SafeFileHandle handle)
+    {
+        Info = info;
+        _handle = handle;
     }
 
     /// <summary>发送 feature report 并立即读回同 ID 的响应（HidD 同步调用，自带设备层超时）；buffer[0] 必须是 report ID。</summary>
@@ -98,7 +118,7 @@ public sealed class HidDeviceHandle : IDisposable
         if (len == 0) return null;
         var buffer = new byte[len];
         buffer[0] = reportId;
-        if (!NativeHid.HidD_GetFeature(_stream.SafeFileHandle, buffer, len))
+        if (!NativeHid.HidD_GetFeature(_handle, buffer, len))
             return null;
         return buffer;
     }
@@ -107,10 +127,10 @@ public sealed class HidDeviceHandle : IDisposable
     public byte[]? GetInputReport(byte reportId)
     {
         ushort length = Info.InputReportLength;
-        if (length == 0) return null;
+        if (_stream == null || length == 0) return null;
         var buffer = new byte[length];
         buffer[0] = reportId;
-        return NativeHid.HidD_GetInputReport(_stream.SafeFileHandle, buffer, length) ? buffer : null;
+        return NativeHid.HidD_GetInputReport(_handle, buffer, length) ? buffer : null;
     }
 
     /// <summary>
@@ -120,7 +140,7 @@ public sealed class HidDeviceHandle : IDisposable
     /// </summary>
     public byte? GetOutputReportId()
     {
-        if (!NativeHid.HidD_GetPreparsedData(_stream.SafeFileHandle, out var preparsed)) return null;
+        if (!NativeHid.HidD_GetPreparsedData(_handle, out var preparsed)) return null;
         try
         {
             // 输出集合优先；个别接口的输出集合没有 caps（纯 padding），退回输入集合——
@@ -148,10 +168,10 @@ public sealed class HidDeviceHandle : IDisposable
     /// </summary>
     public bool SendOutputReport(byte[] report)
     {
-        if (Info.OutputReportLength == 0) return false;
+        if (_stream == null || Info.OutputReportLength == 0) return false;
         var buffer = new byte[Info.OutputReportLength];
         Array.Copy(report, 0, buffer, 0, Math.Min(report.Length, buffer.Length));
-        return NativeHid.HidD_SetOutputReport(_stream.SafeFileHandle, buffer, (uint)buffer.Length);
+        return NativeHid.HidD_SetOutputReport(_handle, buffer, (uint)buffer.Length);
     }
 
     /// <summary>发送 feature report（带自定义 payload），成功后可选择立刻读回。</summary>
@@ -162,7 +182,7 @@ public sealed class HidDeviceHandle : IDisposable
         var buffer = new byte[len];
         buffer[0] = reportId;
         Array.Copy(payload, 0, buffer, 1, Math.Min(payload.Length, len - 1));
-        return NativeHid.HidD_SetFeature(_stream.SafeFileHandle, buffer, len);
+        return NativeHid.HidD_SetFeature(_handle, buffer, len);
     }
 
     /// <summary>
@@ -172,6 +192,7 @@ public sealed class HidDeviceHandle : IDisposable
     /// </summary>
     public bool WriteOutput(byte[] report, TimeSpan timeout, bool quiet = false)
     {
+        if (_stream == null) return false;
         try
         {
             var writeTask = _stream.WriteAsync(report, 0, report.Length);
@@ -204,7 +225,7 @@ public sealed class HidDeviceHandle : IDisposable
     public async Task<byte[]?> ReadInputAsync(TimeSpan timeout)
     {
         ushort len = Info.InputReportLength;
-        if (len == 0) return null;
+        if (_stream == null || len == 0) return null;
         try
         {
             if (_pendingRead == null)
@@ -234,6 +255,7 @@ public sealed class HidDeviceHandle : IDisposable
 
     public void Dispose()
     {
-        _stream.Dispose();
+        if (_stream != null) _stream.Dispose();
+        else _handle.Dispose();
     }
 }

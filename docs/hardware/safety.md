@@ -49,6 +49,8 @@
 
 | 插件 | 写入开关（= 插件开关） | 默认 | 说明 |
 |---|---|---|---|
+| 雷蛇 | `PluginEnabled["Razer"]` | **false** | 保留 V4；新增 SE 鼠标 Feature 与 0555 耳机 PA。耳机每轮两次进入、一条查询、一次释放；未认领接口 15 秒发现，失败冷却 8 秒；已认领接口不重复探测。见 [razer.md](razer.md)、[razer-headset.md](razer-headset.md) |
+| 华硕 | `PluginEnabled["Asus"]` | **false** | Omni 只读配对身份核实与 Scope II 96 的 12/01 查询，见 [asus-rog.md](asus-rog.md) |
 | 迈从 | `PluginEnabled["Mchose"]` | **false** | dongle 协议未破解，探测写入可能干扰设备，故默认关；开插件即授权写帧。**一个开关管键盘、鼠标、V9 Pro 耳机、K7 鼠标、G3 V2（gmouse）五类设备**（品牌级，`AGENTS.md` §9） |
 | 北通 | `PluginEnabled["Betop"]` | **true** | 查询是官方客户端同款只读命令（cmd=0x5），风险低，故默认开 |
 | 罗技 | `PluginEnabled["Logitech"]` | **false** | Centurion 新路径继承 `BatteryPluginBase`，复用公共写入闸门、读数过滤和熔断退避；HID++ 历史路径保留 `HidppIO.WritesAllowed` 与专用会话处理 |

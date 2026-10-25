@@ -89,12 +89,12 @@ public static class HidDeviceScanner
 
     private static HidDeviceInfo? Inspect(string path, List<string> meta)
     {
-        // 只为了读元数据短暂打开；键盘/鼠标保护 collection 打不开就跳过
+        // 元数据只需零访问权限；申请读写会漏掉雷蛇等受系统保护的鼠标集合。
         var handle = NativeHid.CreateFileW(
             path,
-            NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE,
+            0,
             NativeHid.FILE_SHARE_READ | NativeHid.FILE_SHARE_WRITE,
-            IntPtr.Zero, NativeHid.OPEN_EXISTING, NativeHid.FILE_FLAG_OVERLAPPED, IntPtr.Zero);
+            IntPtr.Zero, NativeHid.OPEN_EXISTING, 0, IntPtr.Zero);
 
         using var safe = handle;
         if (safe.IsInvalid) return null;

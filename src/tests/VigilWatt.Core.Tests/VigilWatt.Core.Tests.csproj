@@ -31,6 +31,13 @@
     它靠 HistoryStore(dbPath) 的可选构造参数指向临时库，测试因此不碰真实 history.db。
   -->
   <ItemGroup>
+    <Compile Include="..\..\VigilWatt.Core\Hid\NativeHid.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Hid\HidDeviceInfo.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Asus\AsusKeyboardCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerHeadsetCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerViperSeCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerDeviceProfile.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerReadingState.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Thunderobot\ThunderobotCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Akg\AkgN9Codec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Akg\AkgN9PacketAssembler.cs" />

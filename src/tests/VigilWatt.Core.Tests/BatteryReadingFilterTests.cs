@@ -110,4 +110,15 @@ public class BatteryReadingFilterTests
         Assert.Equal(ReadingVerdict.RejectAnomaly, g.Evaluate(75, T0.AddMinutes(1)));  // 差 35 → 先过滤
         Assert.Equal(ReadingVerdict.AcceptConfirmed, g.Evaluate(75, T0.AddMinutes(6))); // 持续 5 分钟 → 采信
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void ProtocolCanOptInToRealLowBatteryValues(int percent)
+    {
+        var filter = new BatteryReadingFilter(20, TimeSpan.FromMinutes(5), minValidPercent: 0);
+        filter.Seed(2);
+        Assert.Equal(ReadingVerdict.Accept, filter.Evaluate(percent, T0));
+        Assert.Equal(percent, filter.LastAcceptedPercent);
+    }
 }

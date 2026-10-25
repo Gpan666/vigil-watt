@@ -37,7 +37,7 @@
 - 保存电量历史，提供 24 小时、7 天和 30 天统计，并可按设备管理记录。
 - 可设置开机启动。
 
-**设备协议开关：** MCHOSE、Logitech、雷蛇与索尼 INZONE 插件默认关闭，因为读取需要发送查询帧；可在设置中按品牌启用。其他纯被动插件不会主动向设备写入。
+**设备协议开关：** 华硕、MCHOSE、Logitech、雷蛇与索尼 INZONE 插件默认关闭，因为读取需要发送查询帧；可在设置中按品牌启用。其他纯被动插件不会主动向设备写入。
 
 ## 下载与使用
 
@@ -58,6 +58,9 @@
 
 | 设备 / 协议 | 当前状态 |
 |---|---|
+| 华硕 ROG Strix Scope II 96 Wireless · Omni 接收器 | 本机 95%、未充电已验证；默认关闭，见 [asus-rog.md](docs/hardware/asus-rog.md) |
+| 雷蛇 BlackShark V2 Pro (2023) · 1532:0555 | 本机 79%、未充电已验证；与鼠标共用雷蛇开关，见 [razer-headset.md](docs/hardware/razer-headset.md) |
+| 雷蛇 Viper V3 Pro SE · 无线接收器 `1532:00DF` | 本机电量查询已验证；默认关闭，见 [razer-viper-se.md](docs/hardware/razer-viper-se.md) |
 | 迈从 G87 · 2.4G `0x13` | 本机验证 |
 | 迈从新代 dongle · QHW（如 `3837:3033`） | 已实现，待对应设备验证 |
 | 迈从 G87 V2 / A7 V2 Pro · 鼠标 V2 被动帧 | 已实现，默认关闭；贡献者真机，本机只复测 G87 V1 不回归 |
