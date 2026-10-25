@@ -44,6 +44,9 @@
 | **CR-96** | 采集句柄的释放不保证：`UsbHidCaptureSource.Dispose()` 是空实现，句柄在 `RunAsync` 的 `using` 里；pump 卡在同步 `HidD_GetFeature` 时，「暂停 = 释放句柄」不成立，`StopSourceAsync` 3 秒超时后来源仍在跑 | `Capture/Hid/UsbHidCaptureSource.cs:RunAsync`、`Capture/CaptureSession.cs:StopSourceAsync` | `open` |
 | **CR-98** | ATK 显示名依赖本体：接收器只报通用名 `Wireless mouse 8k dongle-M`，型号只能从插线时枚举出的本体取，`ModelNames` 是进程内缓存 → 重启后名字退回通用名，要再插一次线或用户自定义改名才恢复 | `Plugins/Atk/AtkPlugin.cs:BuildDisplayName`、`Plugins/Atk/AtkPlugin.cs:ModelNames`（atk.md §4.1） | `open` |
 | **CR-99** | ATK 设备归一组是硬编码配对表（`101B`/`101A`/`1015` → promax、`1303`/`12A9` → v3），新 PID 必须补一行；未登记 PID 在插充电线时会多出一条记录（上游路径哈希行为）。同机两只同型号鼠标会被并成一条，与 CR-74 同源 | `Plugins/Atk/AtkPlugin.cs:DeviceGroups`（atk.md §4） | `open` |
+| **CR-100** | 鲲鹏20 双通道归一（`betop:kunpeng20`）后拔掉一侧：拔除事件立即把共享条目标离线，幸存通道下一帧要等主轮询拍（≤60 秒）才写回在线，出现假离线窗口；修复方向是组内一通道被拆时立即核实幸存通道 | `Plugins/BatteryPluginBase.cs:ReconcileRemovals`、`docs/hardware/betop.md` §1.8.2 | `open` |
+| **CR-101** | 北通熔断不生效：`CountPollFailures=false` 且未接 `ReportPollFailure`，手柄关机静默时有线兜底查询 1 帧/60 秒永不自动停写；等真机休眠样本决定是否接线 | `Plugins/Betop/BetopPlugin.cs:Offline`（betop.md §1.7） | `open` |
+| **CR-102** | `PidFromPath` 在 `BetopDeviceIdentity` 与 `AtkPlugin` 各有一份（同正则同逻辑），可抽公共 util；不阻塞 | `Plugins/Betop/BetopDeviceIdentity.cs:PidFromPath`、`Plugins/Atk/AtkPlugin.cs:PidFromPath` | `open` |
 
 ## 重构候选（未做）
 
