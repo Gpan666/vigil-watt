@@ -83,8 +83,8 @@ public sealed class MchosePlugin : BatteryPluginBase
     {
         if (info.VendorId == Logitech.LogitechPlugin.LogitechVid) return false;
         if (info.VendorId == Rapoo.RapooPlugin.RapooVid) return false;
-        // 北通接收器也有 usage 0xFF00 的 vendor 接口，但它不是迈从协议，勿发 QHW/0x13 帧
-        if (info.VendorId == Betop.BetopPlugin.BetopVid) return false;
+        // 北通接收器也有 usage 0xFF00 / 0x00FF 的 vendor 接口（两代 VID），但它不是迈从协议，勿发 QHW/0x13 帧
+        if (info.VendorId == Betop.BetopPlugin.BetopVid || info.VendorId == Betop.BetopPlugin.BetopVidNew) return false;
         // 英菲克接收器也暴露 64 字节 vendor 输出接口；避免误发迈从会话/查询帧
         if (info.VendorId == Inphic.InphicPlugin.InphicVid) return false;
         // HECATE 的厂商集合同样是 64 字节进出，不能当成迈从接口

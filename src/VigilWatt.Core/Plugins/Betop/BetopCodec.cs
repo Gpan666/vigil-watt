@@ -53,12 +53,36 @@ internal static class BetopCodec
     /// <summary>把 T9 原始电量字节（0~120）换算成百分比（0~100，四舍五入）。</summary>
     public static int T9ToPercent(byte raw) => (raw * 100 + T9BatteryFull / 2) / T9BatteryFull;
 
-    // 鲲鹏20 2.4G 接收器把电量广播放在杂项 usage page（而非厂商页 0xFF00）——
-    // 真机 2026-10-25 观察到该通道每秒广播 `02 15 <电量> 00 <充电位>`，页值报 0x00FF/0x0003
-    // （不同工具对 page/usage 读法有别，先两个都认，真机日志收敛后再收紧）。
+    // 北通有两代 dongle、两个 usage page，判据收在这里便于单测（接口地图见 betop.md §1.1 §1.8）。
 
-    /// <summary>杂项广播页：鲲鹏20 2.4G 接收器的电量广播通道页值，只听不写。</summary>
-    public static bool IsBroadcastUsagePage(ushort usagePage) => usagePage is 0x00FF or 0x0003;
+    /// <summary>旧接收器的 VID（T9、鲲鹏20 老批次）。</summary>
+    public const ushort VendorId = 0x20BC;
+
+    /// <summary>新批次 dongle 的 VID（`KP20 DONGLE`、`BTP-KP70A DONGLE` 底座）。</summary>
+    public const ushort VendorIdNew = 0x20DD;
+
+    /// <summary>厂商集合的 usage page（T9 / 老批次，须查询才回帧）。</summary>
+    public const ushort VendorPage = 0xFF00;
+
+    /// <summary>杂项广播集合的 usage page（鲲鹏20/70 的 dongle 每秒自推电量）。</summary>
+    public const ushort BroadcastPage = 0x00FF;
+
+    /// <summary>北通 VID：`0x20BC` 旧接收器、`0x20DD` 新批次 dongle。</summary>
+    public static bool IsBetopVendor(ushort vendorId) => vendorId is VendorId or VendorIdNew;
+
+    /// <summary>
+    /// 该集合是不是北通的电量通道：VID 命中，且 page/usage 含厂商页或广播页（两种集合的 usage 都是 `0x0003`）。
+    /// usage 侧也查一遍以兼容扫描器把 page/usage 读颠倒；标准 VR 页 `0x0003` 因此不再单独命中。
+    /// </summary>
+    public static bool IsVendorInterface(ushort vendorId, ushort usagePage, ushort usage)
+        => IsBetopVendor(vendorId) && (IsVendorPage(usagePage) || IsVendorPage(usage));
+
+    /// <summary>杂项广播页（`0x00FF`）承载鲲鹏20/70 的每秒自推：探测与轮询先纯听；厂商页仍直接查询。</summary>
+    public static bool IsBroadcastInterface(ushort vendorId, ushort usagePage, ushort usage)
+        => IsVendorInterface(vendorId, usagePage, usage)
+           && (usagePage == BroadcastPage || usage == BroadcastPage);
+
+    private static bool IsVendorPage(ushort value) => value is VendorPage or BroadcastPage;
 
     /// <summary>T9 被动状态流的解析结果。</summary>
     /// <param name="Percent">电量百分比（0~100）；<paramref name="Linked"/> 为 false 时无意义（是占位值）。</param>

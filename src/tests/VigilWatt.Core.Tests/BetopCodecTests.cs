@@ -259,17 +259,35 @@ public class BetopCodecTests
             Hex("04 02 80 80 80 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")));
     }
 
-    // ---------------------------------------------------------------- 2.4G 广播通道（杂项 usage page）
-    // 鲲鹏20 2.4G 接收器把电量广播放在杂项页（真机 2026-10-25 每秒自推，见 docs/hardware/betop.md §1.8）。
+    // ---------------------------------------------------------------- 电量接口判据（两代 VID × 两个页）
+    // 20DD 新批次 dongle 的判据见 docs/hardware/betop.md §1.8；旧判据把标准 VR 页 0x0003 也算广播页。
+
+    [Theory]
+    [InlineData(0x20BC, 0xFF00, 0x0003, true)]    // 旧接收器（T9 / 鲲鹏20 老批次）
+    [InlineData(0x20BC, 0x00FF, 0x0003, true)]    // 直插的 BTP-KP70A XINPUT DONGLE
+    [InlineData(0x20DD, 0x00FF, 0x0003, true)]    // 底座接收器、KP20 DONGLE
+    [InlineData(0x20DD, 0xFF00, 0x0003, true)]    // 新 VID + 旧页，一并收
+    [InlineData(0x20BC, 0x0003, 0x00FF, true)]    // 扫描器把 page/usage 读颠倒
+    [InlineData(0x20BC, 0x0001, 0x0005, false)]   // 手柄本体（XInput 呈现）
+    [InlineData(0x20DD, 0x0001, 0x0006, false)]   // 键盘模拟接口
+    [InlineData(0x20BC, 0x0003, 0x0003, false)]   // 标准 VR 页：旧判据会误命中，现已收紧
+    [InlineData(0x1532, 0x00FF, 0x0003, false)]   // 别家的 0x00FF 厂商口
+    [InlineData(0x3837, 0xFF00, 0x0003, false)]   // 迈从 dongle 的厂商口
+    public void B1_电量接口判据(ushort vid, ushort usagePage, ushort usage, bool expected)
+        => Assert.Equal(expected, BetopCodec.IsVendorInterface(vid, usagePage, usage));
 
     [Fact]
-    public void B1_杂项广播页判定()
+    public void B1b_只有广播页走先纯听()
     {
-        Assert.True(BetopCodec.IsBroadcastUsagePage(0x00FF));
-        Assert.True(BetopCodec.IsBroadcastUsagePage(0x0003));
-        // 厂商页走查询、鼠标/键盘/手柄在 0x0001 页，都不是广播通道
-        Assert.False(BetopCodec.IsBroadcastUsagePage(0xFF00));
-        Assert.False(BetopCodec.IsBroadcastUsagePage(0x0001));
+        // 0x00FF：dongle 每秒自推，探测/轮询先纯听（零写入）
+        Assert.True(BetopCodec.IsBroadcastInterface(0x20BC, 0x00FF, 0x0003));
+        Assert.True(BetopCodec.IsBroadcastInterface(0x20DD, 0x00FF, 0x0003));
+        Assert.True(BetopCodec.IsBroadcastInterface(0x20BC, 0x0003, 0x00FF));    // page/usage 读颠倒
+        // 厂商页 0xFF00（T9 三个接口）：T9 不答查询但仍直接写，别为它白等 3 秒纯听
+        Assert.False(BetopCodec.IsBroadcastInterface(0x20BC, 0xFF00, 0x0003));
+        Assert.False(BetopCodec.IsBroadcastInterface(0x20DD, 0xFF00, 0x0003));
+        // 手柄接口本来就不是候选
+        Assert.False(BetopCodec.IsBroadcastInterface(0x20BC, 0x0001, 0x0005));
     }
 
     [Fact]

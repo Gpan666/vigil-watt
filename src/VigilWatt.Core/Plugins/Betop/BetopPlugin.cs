@@ -12,14 +12,11 @@ namespace VigilWatt.Core.Plugins.Betop;
 /// </summary>
 public sealed class BetopPlugin : BatteryPluginBase
 {
-    /// <summary>北通（BETOP）USB 厂商 ID。</summary>
-    public const ushort BetopVid = 0x20BC;
+    /// <summary>北通（BETOP）旧接收器的 USB 厂商 ID；新批次 dongle 是 <see cref="BetopVidNew"/>。</summary>
+    public const ushort BetopVid = BetopCodec.VendorId;
 
-    /// <summary>厂商自定义接口的 usage_page（HID 规范的厂商页 0xFF00）。</summary>
-    public const ushort VendorUsagePage = 0xFF00;
-
-    /// <summary>厂商接口的 usage（接收器 4 个接口里 0x03 = 厂商通道）。</summary>
-    public const ushort VendorUsage = 0x0003;
+    /// <summary>新批次 dongle 的厂商 ID（`KP20 DONGLE`、`BTP-KP70A DONGLE` 底座）。</summary>
+    public const ushort BetopVidNew = BetopCodec.VendorIdNew;
 
     /// <summary>回退写入长度（接口未声明输出长度时使用；鲲鹏20 厂商接口为 64）。</summary>
     private const int FallbackWriteLength = 64;
@@ -60,20 +57,26 @@ public sealed class BetopPlugin : BatteryPluginBase
     protected override TimeSpan ProbeCooldown => TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// 候选接口：北通 VID + 厂商页 usage_page 0xFF00，或杂项广播页（鲲鹏20 2.4G 的电量广播通道）。
-    /// 接收器的鼠标/键盘/手柄接口都在 usage_page 0x0001，据此天然排除；两边都查以兼容
-    /// 个别扫描器把 usage_page/usage 序颠倒。
+    /// 候选接口：北通 VID（`0x20BC` 旧 / `0x20DD` 新批次）+ 电量页（`0xFF00` 厂商页 / `0x00FF` 广播页）。
+    /// 接收器的鼠标/键盘/手柄接口都在 usage_page 0x0001，据此天然排除（判据见 betop.md §1.8）。
     /// </summary>
     protected override bool IsCandidate(HidDeviceInfo info)
     {
-        if (info.VendorId != BetopVid) return false;
-        return info.UsagePage == VendorUsagePage || info.Usage == VendorUsagePage
-            || BetopCodec.IsBroadcastUsagePage(info.UsagePage);
+        // 观测期（2026-10-25）：官方软件是否参与 dongle 身份抖动尚无证据，这里只让它记状态变化，不拦认领。
+        BetopOfficialAppGuard.Observe();
+
+        if (BetopCodec.IsVendorInterface(info.VendorId, info.UsagePage, info.Usage)) return true;
+
+        // 判据不符也要留痕：CR-89 那次用户只看到"没有设备"，日志里一个字都没有
+        if (BetopCodec.IsBetopVendor(info.VendorId))
+            Log.InfoThrottled($"betop-nomatch:{info.DevicePath}",
+                $"北通设备在、但接口不对（未认领）: {info} path={info.DevicePath}", TimeSpan.FromMinutes(10));
+        return false;
     }
 
-    /// <summary>杂项广播页（0x00FF/0x0003）承载鲲鹏20 电量：dongle 每秒自推、有线静默须查询，见 betop.md §1.8。</summary>
+    /// <summary>杂项广播页（`0x00FF`）承载鲲鹏20/70 电量：dongle 每秒自推、有线静默须查询，见 betop.md §1.8。</summary>
     private static bool IsBroadcastChannel(HidDeviceInfo info)
-        => BetopCodec.IsBroadcastUsagePage(info.UsagePage);
+        => BetopCodec.IsBroadcastInterface(info.VendorId, info.UsagePage, info.Usage);
 
     /// <summary>广播通道的读窗口：广播每秒一帧，3 秒留丢一帧的余量。</summary>
     private static readonly TimeSpan BroadcastListenWindow = TimeSpan.FromSeconds(3);

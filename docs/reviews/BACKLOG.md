@@ -49,6 +49,7 @@
 | **CR-103** | 鲲鹏20 双通道归一（`betop:kunpeng20`）后拔掉一侧：拔除事件立即把共享条目标离线，幸存通道下一帧要等主轮询拍（≤60 秒）才写回在线，出现假离线窗口；修复方向是组内一通道被拆时立即核实幸存通道 | `Plugins/BatteryPluginBase.cs:ReconcileRemovals`、`docs/hardware/betop.md` §1.8.2 | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
 | **CR-104** | 北通熔断不生效：`CountPollFailures=false` 且未接 `ReportPollFailure`，手柄关机静默时有线兜底查询 1 帧/60 秒永不自动停写；等真机休眠样本决定是否接线 | `Plugins/Betop/BetopPlugin.cs:Offline`（betop.md §1.7） | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
 | **CR-105** | `PidFromPath` 在 `BetopDeviceIdentity` 与 `AtkPlugin` 各有一份（同正则同逻辑），可抽公共 util；不阻塞 | `Plugins/Betop/BetopDeviceIdentity.cs:PidFromPath`、`Plugins/Atk/AtkPlugin.cs:PidFromPath` | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
+| **CR-106** | 北通新批次 dongle（`20DD:5128` KP20 DONGLE、`20DD:5130` 底座）只回 `02 CD 09 0A 08 08 …`，header 不在已知命令表里、`ParseStatus` 不认 → 探测失败、设备不进列表。疑似「dongle 在位、手柄未连接」占位帧但未证实（`20BC:5130` 同场景回的是 `02 15`）；须用设备诊断页采手柄开机/关机两份原始报文才能定 byte 含义 | `Plugins/Betop/BetopCodec.cs:ParseStatus`（betop.md §1.8.4） | `open` |
 
 ## 重构候选（未做）
 
