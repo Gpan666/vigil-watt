@@ -46,6 +46,9 @@
 | **CR-99** | ATK 设备归一组是硬编码配对表（`101B`/`101A`/`1015` → promax、`1303`/`12A9` → v3），新 PID 必须补一行；未登记 PID 在插充电线时会多出一条记录（上游路径哈希行为）。同机两只同型号鼠标会被并成一条，与 CR-74 同源 | `Plugins/Atk/AtkPlugin.cs:DeviceGroups`（atk.md §4） | `open` |
 | **CR-100** | HECATE 主动查询最坏约 2.9 秒堵在 `Poll` 里（3 次 × (500ms 写超时 + 750ms 听) + 2 × 300ms 间隔），鼠标关机/深度休眠时每轮都走满，与 CR-91 同源；未实测对其它插件轮询节奏的影响 | `Plugins/Hecate/HecatePlugin.cs:PollDevice`、`QueryAsync`（hecate.md §3） | `open` |
 | **CR-102** | 插件级策略无法按型号分化：`SupportsPassiveListen` / `SupportsFastDiscovery` / `Offline` / `MaxPlausibleStepPercent` 都是插件级，狼蛛 G9（被动、进 15 秒档、沉默 10 秒离线、单步 100）与 F99 Pro/HERO（会话、不进档、沉默不判离线、单步 20）只能拆成两个插件类共用一个 `Name`。要做「一品牌一插件类」得先把这四个开关改成按协议可覆盖 | `Plugins/BatteryPluginBase.cs`、`Plugins/Aula/AulaG9Plugin.cs`（aula.md §3） | `open` |
+| **CR-103** | 鲲鹏20 双通道归一（`betop:kunpeng20`）后拔掉一侧：拔除事件立即把共享条目标离线，幸存通道下一帧要等主轮询拍（≤60 秒）才写回在线，出现假离线窗口；修复方向是组内一通道被拆时立即核实幸存通道 | `Plugins/BatteryPluginBase.cs:ReconcileRemovals`、`docs/hardware/betop.md` §1.8.2 | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
+| **CR-104** | 北通熔断不生效：`CountPollFailures=false` 且未接 `ReportPollFailure`，手柄关机静默时有线兜底查询 1 帧/60 秒永不自动停写；等真机休眠样本决定是否接线 | `Plugins/Betop/BetopPlugin.cs:Offline`（betop.md §1.7） | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
+| **CR-105** | `PidFromPath` 在 `BetopDeviceIdentity` 与 `AtkPlugin` 各有一份（同正则同逻辑），可抽公共 util；不阻塞 | `Plugins/Betop/BetopDeviceIdentity.cs:PidFromPath`、`Plugins/Atk/AtkPlugin.cs:PidFromPath` | `open`（原 PR #60 编号与 dev 冲突，合入时顺延） |
 
 ## 重构候选（未做）
 

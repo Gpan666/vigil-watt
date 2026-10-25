@@ -4,7 +4,7 @@ using Xunit;
 namespace VigilWatt.Core.Tests;
 
 /// <summary>
-/// 功 能： BetopCodec —— 北通 (BETOP) 手柄状态报告（report 0x02 / header 0x15）帧编解码。
+/// 功 能： BetopCodec —— 北通 (BETOP) 手柄状态帧编解码与电量通道 usage page 判定。
 /// 2026/10/06 15:53:36 xliu
 /// 帧结构见 docs/hardware/betop.md §1。
 /// </summary>
@@ -257,6 +257,29 @@ public class BetopCodecTests
         // 0 = 未就绪/占位
         Assert.Null(BetopCodec.ParseT9Status(
             Hex("04 02 80 80 80 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00")));
+    }
+
+    // ---------------------------------------------------------------- 2.4G 广播通道（杂项 usage page）
+    // 鲲鹏20 2.4G 接收器把电量广播放在杂项页（真机 2026-10-25 每秒自推，见 docs/hardware/betop.md §1.8）。
+
+    [Fact]
+    public void B1_杂项广播页判定()
+    {
+        Assert.True(BetopCodec.IsBroadcastUsagePage(0x00FF));
+        Assert.True(BetopCodec.IsBroadcastUsagePage(0x0003));
+        // 厂商页走查询、鼠标/键盘/手柄在 0x0001 页，都不是广播通道
+        Assert.False(BetopCodec.IsBroadcastUsagePage(0xFF00));
+        Assert.False(BetopCodec.IsBroadcastUsagePage(0x0001));
+    }
+
+    [Fact]
+    public void B2_广播帧与查询响应同构_现有解析直接认()
+    {
+        // 真机广播帧（2026-10-25 偷听）：41% 未充电，每秒一帧
+        var parsed = BetopCodec.ParseStatus(Hex("02 15 29 00 50 01 01 00 00 00 00 00 00 00 00 00"));
+        Assert.NotNull(parsed);
+        Assert.Equal(41, parsed!.Value.Percent);
+        Assert.False(parsed.Value.Charging);
     }
 
     // ---------------------------------------------------------------- 产品串收拾成型号名

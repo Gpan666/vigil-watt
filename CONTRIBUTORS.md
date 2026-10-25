@@ -22,6 +22,7 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 | **Gpan666** | 历史库时间戳时区修正（`HistoryStore` 读库时把 UTC 毫秒转本地时区）；ATK A98 Pro 键盘的 VIA 电量通道、F1 Ultimate 2.0 型号识别，以及迈从 X9 耳机 | [PR #50](https://github.com/evren-oct/vigil-watt/pull/50) · [PR #28](https://github.com/evren-oct/vigil-watt/pull/28) |
 | **mofeng816** | ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`，`FF02` 口 17 字节查询帧）与 HyperX Cloud Flight 2（`03F0:0AC1`，`FF90` 口被动推送帧）两个插件，含协议分析、编解码单测与真机验证 | [PR #48](https://github.com/evren-oct/vigil-watt/pull/48) |
 | **wx2995** | 狼蛛 G9 耳机（`38A6:0030`，被动状态帧）、L9 Ultra 鼠标（`38A6:28FD`，`0x81` 查询）与 VGN V98 Pro 键盘（`320F:5088`，`0x1A` 查询）三台适配 | [PR #31](https://github.com/evren-oct/vigil-watt/pull/31) |
+| **Cecilian-Elysian** | 北通鲲鹏20 三通道适配（2.4G 杂项页广播 / 有线 `02 15` 查询 / 双通道归一一个设备位），并逐路排查确认蓝牙通道无用户态可读数据 | [PR #60](https://github.com/evren-oct/vigil-watt/pull/60) |
 | **kaniu** | 迈从 A5 V2 Ultra（`3837:100C`，反码 Feature 查询）、雷蛇 Kraken V4 耳机（`1532:056C`，64 字节 `0x02` 报告）与 Haute42 Adapter 4DS（借 DualSense 号段的 USB 适配器）三台适配；另提供 11 项重连回归测试 | [PR #20](https://github.com/evren-oct/vigil-watt/pull/20) |
 | **KaelenVoss10** | 凌豹 M5PRO Max（`3151:402D`，官方驱动同款 `F7` 状态查询）与迈从 G75 Pro（`3554:FA09`）适配；给出「同 VID/PID 按会话 ACK 型号码分流」的认领机制 | [PR #53](https://github.com/evren-oct/vigil-watt/pull/53) |
 | **Bamlax** | 凌豹 K98（`3554:FA09`，`0x13` 会话/推送）适配；给出型号码 `0x0212` 与官方驱动 `KB.ini` 的对照 | [PR #29](https://github.com/evren-oct/vigil-watt/pull/29) |

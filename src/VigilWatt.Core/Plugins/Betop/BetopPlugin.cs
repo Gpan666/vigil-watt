@@ -60,32 +60,63 @@ public sealed class BetopPlugin : BatteryPluginBase
     protected override TimeSpan ProbeCooldown => TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// 候选接口：北通 VID + 厂商页 usage_page 0xFF00。接收器的鼠标/键盘/手柄接口都在
-    /// usage_page 0x0001，据此天然排除；两边都查以兼容个别扫描器把 usage_page/usage 序颠倒。
+    /// 候选接口：北通 VID + 厂商页 usage_page 0xFF00，或杂项广播页（鲲鹏20 2.4G 的电量广播通道）。
+    /// 接收器的鼠标/键盘/手柄接口都在 usage_page 0x0001，据此天然排除；两边都查以兼容
+    /// 个别扫描器把 usage_page/usage 序颠倒。
     /// </summary>
     protected override bool IsCandidate(HidDeviceInfo info)
     {
         if (info.VendorId != BetopVid) return false;
-        return info.UsagePage == VendorUsagePage || info.Usage == VendorUsagePage;
+        return info.UsagePage == VendorUsagePage || info.Usage == VendorUsagePage
+            || BetopCodec.IsBroadcastUsagePage(info.UsagePage);
     }
 
+    /// <summary>杂项广播页（0x00FF/0x0003）承载鲲鹏20 电量：dongle 每秒自推、有线静默须查询，见 betop.md §1.8。</summary>
+    private static bool IsBroadcastChannel(HidDeviceInfo info)
+        => BetopCodec.IsBroadcastUsagePage(info.UsagePage);
+
+    /// <summary>广播通道的读窗口：广播每秒一帧，3 秒留丢一帧的余量。</summary>
+    private static readonly TimeSpan BroadcastListenWindow = TimeSpan.FromSeconds(3);
+
+    /// <summary>鲲鹏20 的 dongle 与有线本体归一同一设备位（先例 AtkPlugin 配对组），表与缺点见 <see cref="BetopDeviceIdentity"/>。</summary>
+    protected override string IdFor(string devicePath)
+        => BetopDeviceIdentity.KunpengId(devicePath, Name.ToLowerInvariant()) ?? base.IdFor(devicePath);
+
     /// <summary>
-    /// 探测 = 发一条状态查询，2 秒窗口内等响应；收不到 = 手柄休眠，返回 null 进冷却。
-    ///
+    /// 探测：杂项页先纯听、静默再查询兜底（探测写受基类探测闸门）；厂商页发查询。收不到 = 手柄休眠进冷却。
     /// dongle 报"未连接占位帧"时**也算探测成功**（协议名 + 电量 null）：基类据此认领设备、
     /// 但按"无读数 = 离线"标离线，列表显示「北通 T9 · 离线 · --%」，而不是手柄关了还显示"67% 在线"。
     /// </summary>
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
     {
-        var read = Query(handle, TimeSpan.FromSeconds(2), dev: null);
+        var read = IsBroadcastChannel(handle.Info)
+            ? Listen(handle, BroadcastListenWindow, dev: null)
+                ?? Query(handle, TimeSpan.FromSeconds(2), dev: null)
+            : Query(handle, TimeSpan.FromSeconds(2), dev: null);
         if (read == null) return null;
         if (!read.Value.Linked) return (ProtocolName, null, ChargingState.Unknown);
         return (ProtocolName, read.Value.Percent, MapCharging(read.Value.Percent, read.Value.Charging));
     }
 
-    /// <summary>轮询 = 发一条状态查询读电量。写入被开关/熔断挡住时返回 null（计入失败，但不再写）。</summary>
+    /// <summary>
+    /// 轮询：杂项页先纯听（dongle 每秒自推必命中、零写入），听不到且 CanWrite 才查询兜底；厂商页直接发查询。
+    /// 写入被开关挡住时返回 null（计入失败，但不再写；熔断对北通当前不生效，见 betop.md §1.7）。
+    /// </summary>
     protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
     {
+        if (IsBroadcastChannel(dev.Handle.Info))
+        {
+            var listen = Listen(dev.Handle, TimeSpan.FromSeconds(1.5), dev)
+                ?? (CanWrite(dev) ? Query(dev.Handle, TimeSpan.FromSeconds(1.5), dev) : null);
+            if (listen == null) return null;
+            if (!listen.Value.Linked)
+            {
+                RequestOffline(dev);
+                return null;
+            }
+            return (listen.Value.Percent, MapCharging(listen.Value.Percent, listen.Value.Charging));
+        }
+
         if (!CanWrite(dev)) return null;
         var read = Query(dev.Handle, TimeSpan.FromSeconds(1.5), dev);
         if (read == null) return null;
@@ -129,9 +160,8 @@ public sealed class BetopPlugin : BatteryPluginBase
     private readonly record struct QueryResult(int Percent, bool Charging, bool Linked);
 
     /// <summary>
-    /// 发一条状态查询并读取响应。写一次（长度/report ID 取自接口的报告描述符），窗口内持续收帧
-    /// 直到解析成功。返回 null = 窗口内没读到任何可识别帧。<paramref name="dev"/> 只用于决定
-    /// "未连接"日志要不要打（避免每分钟刷屏）。
+    /// 发一条状态查询并在窗口内等响应。写一次（长度/report ID 取自接口的报告描述符），
+    /// 读窗口见 <see cref="Listen"/>。<paramref name="dev"/> 只用于决定"未连接"日志要不要打（避免每分钟刷屏）。
     /// </summary>
     private static QueryResult? Query(HidDeviceHandle handle, TimeSpan window, TrackedDevice? dev)
     {
@@ -149,6 +179,15 @@ public sealed class BetopPlugin : BatteryPluginBase
             return null;
         }
 
+        return Listen(handle, window, dev);
+    }
+
+    /// <summary>
+    /// 纯读窗口：不发任何帧，窗口内持续收 dongle 自推的帧直到解析成功
+    /// （广播通道全程只走这里；查询路径在写完后也走这里等响应）。返回 null = 窗口内没读到可识别帧。
+    /// </summary>
+    private static QueryResult? Listen(HidDeviceHandle handle, TimeSpan window, TrackedDevice? dev)
+    {
         var deadline = DateTime.UtcNow + window;
         int logged = 0;
         while (DateTime.UtcNow < deadline)
@@ -232,9 +271,12 @@ public sealed class BetopPlugin : BatteryPluginBase
     private static ChargingState MapCharging(int percent, bool charging)
         => ChargingStateMap.FromChargingFlag(charging, percent);
 
-    /// <summary>显示名：产品串形如 "BEITONG T9 For Keyboard & Mouse"，收拾成型号后拼成 "北通 T9"。</summary>
+    /// <summary>鲲鹏20 组定死组名（两通道产品串不同会互相顶名）；组外按产品串收拾成「北通 &lt;型号&gt;」。</summary>
     protected override string BuildDisplayName(HidDeviceInfo info)
     {
+        if (BetopDeviceIdentity.KunpengGroups.ContainsKey(info.ProductId))
+            return "北通 鲲鹏20";
+
         var model = BetopCodec.CleanProductName(info.Product);
         return string.IsNullOrEmpty(model) ? $"北通手柄 ({info.VidPid})" : $"北通 {model}";
     }
