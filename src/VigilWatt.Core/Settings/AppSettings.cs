@@ -95,7 +95,7 @@ public class AppSettings
         ["SonyInzone"] = false, // 索尼 INZONE H9 II：0xFF04 控制传输查询，要写帧，默认关闭（inzone-h9.md）
         ["Atk"] = false,        // ATK 8K 接收器（FF02 口 17B）：发 08 04…49 只读查询，要写帧，默认关闭（atk.md）
         ["HyperX"] = true,      // HyperX CF2（03F0:0AC1 FF90 口）：零写入，纯被动监听（hyperx-cf2.md）
-        ["Lingbao"] = false,    // 凌豹：feature 通道 GET_BATTERY 要写帧，默认关闭（lingbao.md §1）
+        ["Lingbao"] = false,    // 凌豹：M5PRO Max 的 feature 查询与 K98 的会话帧都要写，默认关闭（lingbao.md §1 §2）
     };
 
     /// <summary>是否把本机（笔记本）电池也纳入监控。默认关闭——它是"另一类设备"，不像外设那样需要盯着，用户明确要时才开（见设置页「监控本机电量」）。

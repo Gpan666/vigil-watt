@@ -33,7 +33,7 @@
 - [ganss.md](hardware/ganss.md)：GANSS GS3104T-Pro 的查询帧、认领判据风险与验证清单。
 - [akg.md](hardware/akg.md)：AKG N9 Hybrid 接收器查询、控制输入读取和验证边界。
 - [mchose-v9-pro.md](hardware/mchose-v9-pro.md)：MCHOSE V9 Pro 耳机的查询帧与未复测边界。
-- [lingbao.md](hardware/lingbao.md)：凌豹 M5PRO Max 的官方驱动同款 `F7` 查询、充电位与有线接口不认领的边界。
+- [lingbao.md](hardware/lingbao.md)：凌豹 M5PRO Max 的官方驱动同款 `F7` 查询，与 K98 的 Compx `0x13` 会话及型号码分流。
 - [safety.md](hardware/safety.md)：硬件写入规则与事故复盘；任何写入改动前必读。
 - [debugging.md](hardware/debugging.md)：官方软件抓包、HID 观测和协议验证步骤。
 

@@ -22,7 +22,7 @@
 
 设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
-`#44` / `#48` / `#58` / `#47` 已合入（2026-10-25）：HERO 68 Air、AKG N9 Hybrid、ATK 两款鼠标、HyperX CF2、华硕 ROG Scope II 96、雷蛇黑鲨 V2 Pro / 毒蝰 V3 Pro SE 九台设备均继承 `BatteryPluginBase`。会写帧的（HERO、N9、ATK、华硕、雷蛇）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧；雷蛇 Viper V3 Pro SE 只开零权限 Feature 句柄。HECATE 自 #47 改主动查询、开关默认关。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99，HECATE 查询阻塞见 CR-100；协议与验证边界见 `hardware/aula.md` §2、`akg.md`、`atk.md`、`hyperx-cf2.md`、`asus-rog.md`、`razer*.md`、`hecate.md` §3。
+`#44` / `#48` / `#58` / `#47` / `#53` / `#29` 已合入（2026-10-25）：HERO 68 Air、AKG N9 Hybrid、ATK 两款鼠标、HyperX CF2、华硕 ROG Scope II 96、雷蛇黑鲨 V2 Pro / 毒蝰 V3 Pro SE 九台设备均继承 `BatteryPluginBase`。会写帧的（HERO、N9、ATK、华硕、雷蛇）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧；雷蛇 Viper V3 Pro SE 只开零权限 Feature 句柄。HECATE 自 #47 改主动查询、开关默认关。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99，HECATE 查询阻塞见 CR-100；协议与验证边界见 `hardware/aula.md` §2、`akg.md`、`atk.md`、`hyperx-cf2.md`、`asus-rog.md`、`razer*.md`、`hecate.md` §3。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
@@ -55,7 +55,7 @@
 | 迈从 K7 V2 Ultra+（VID_3837&PID_1018） | `0x4D` 通道，`0x0900` 查询 + `0x0600` 被动事件 | 代码已接入（并入迈从插件），默认关。会写帧。贡献者真机连跑 6.5 小时（mchose.md §3） |
 | 迈从 G3 V2（VID_3837&PID_4245） | `0xFF01/0x0010` 通道，65 字节主动查询，应答前缀 `AA 30` | 代码已接入（并入迈从插件），默认关。会写帧。贡献者真机读到 89%/86% 未充电，本机无该设备未复测（mchose.md §4） |
 | 迈从 G75 Pro（VID_3554&PID_FA09） | 与 AULA F99 Pro 同指纹，靠会话 ACK 密码分流到迈从 | 代码已接入（并入迈从插件），默认关。会写帧。贡献者真机 ACK 型号 G75 Pro、`13 4A` = 36%，本机未复测（mchose.md §5） |
-| 凌豹 M5PRO Max（VID_3151&PID_402D） | feature 65 字节，官方驱动同款 `F7` 状态查询（无校验和），`[5]` = 充电位 | 代码已接入，默认关。会写帧。贡献者真机读数与官方一致（88%/95%），充电 `[5]=01` 已校准；有线 `4026` 不认领，本机未复测（lingbao.md） |
+| 凌豹 M5PRO Max（VID_3151&PID_402D）/ K98（VID_3554&PID_FA09） | 前者 feature 65 字节、官方驱动同款 `F7` 查询，`[5]` = 充电位；后者 `0x13` 会话，靠型号码 `0x0212` 与 AULA `0x0158` 分流 | 一个插件管两台（`ResolveKind` 按协议给图标），默认关、会写帧。贡献者真机 88%/95%（M5PRO Max）与 100%（K98），有线 `4026` 不认领，本机未复测（lingbao.md §1 §2） |
 | 黑爵 AK870（VID_3151&PID_4011） | feature `F7` 状态查询，`[2]` 电量 + `[4]` 在线 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
 | 雷神 ML903 NearLink Se（VID_369B&PID_0234） | `0xA0` 设备信息查询，TLV `0x0225` = 电量 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
 | EDIFIER W820NB | HFP 网关 `DEVPKEY_Device_BatteryLevel` | 已打通，与设置页一致 |

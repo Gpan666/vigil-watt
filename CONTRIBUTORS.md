@@ -21,6 +21,8 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 | **Delitriuz** | HECATE G3M Pro 升级版（接收器 `35BB:D3FB`，17 字节 `0xFF02` 通道，STATUS `08 03` / POWER `08 04`）插件，并给出 Kysona 内核驱动出处与 10 分钟被动监听结论 | [PR #49](https://github.com/evren-oct/vigil-watt/pull/49) |
 | **Gpan666** | 历史库时间戳时区修正：`HistoryStore` 读库时把 UTC 毫秒转本地时区，离线设备「更新于」不再少 8 小时 | [PR #50](https://github.com/evren-oct/vigil-watt/pull/50) |
 | **mofeng816** | ATK / VXE 无线鼠标（接收器 `373B:101B` / `101A` / `1303`，本体 `1015` / `12A9`，`FF02` 口 17 字节查询帧）与 HyperX Cloud Flight 2（`03F0:0AC1`，`FF90` 口被动推送帧）两个插件，含协议分析、编解码单测与真机验证 | [PR #48](https://github.com/evren-oct/vigil-watt/pull/48) |
+| **KaelenVoss10** | 凌豹 M5PRO Max（`3151:402D`，官方驱动同款 `F7` 状态查询）与迈从 G75 Pro（`3554:FA09`）适配；给出「同 VID/PID 按会话 ACK 型号码分流」的认领机制 | [PR #53](https://github.com/evren-oct/vigil-watt/pull/53) |
+| **Bamlax** | 凌豹 K98（`3554:FA09`，`0x13` 会话/推送）适配；给出型号码 `0x0212` 与官方驱动 `KB.ini` 的对照 | [PR #29](https://github.com/evren-oct/vigil-watt/pull/29) |
 | **Mzood** | 华硕 ROG Strix Scope II 96 Wireless（Omni 接收器 `0B05:1ACE`）、雷蛇 BlackShark V2 Pro 2023（`1532:0555`）与 Viper V3 Pro SE（`1532:00DF`）三台适配；顺带给基类加了零权限 Feature 句柄与按接口取读数下界两个钩子 | [PR #58](https://github.com/evren-oct/vigil-watt/pull/58) |
 
 ## 还能怎么帮
