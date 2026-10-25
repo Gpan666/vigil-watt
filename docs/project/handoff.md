@@ -20,6 +20,8 @@
 
 设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
+PR #44 指向 `dev`（2026-10-24），沿用 `feat/aula-hero68-air`。`c3ce47e` 独立编译版经用户界面实测超过十分钟正常，现已关闭；修复、五轮日志及充电测试取消说明已[回复维护者](https://github.com/evren-oct/vigil-watt/pull/44#issuecomment-6379044906)。两个品牌均继承 `BatteryPluginBase`，主动通信默认关闭，不进每 15 秒常规发现。HERO 68 Air 已验证 10% 放电/充电，维护者认可可合入；AKG N9 已见 50% / 100%，充电未知。用户观察 AKG 充电时无法工作并取消该测试。协议与验证边界见 `hardware/aula.md`、`hardware/akg.md`，后续项 CR-81/84/97；[维护者原文](https://github.com/evren-oct/vigil-watt/pull/44#issuecomment-6368872663)。
+
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
 下结论前先跑 `cmd /c ver`。**本机现在是 `10.0.26200.9445`（Win11 25H2）**；「哪一层背景可见」「Win10 上透明与 DWM 投影互斥」（CR-57）这类基于 Win10 的判断都要按新系统重判，别照抄。
@@ -65,7 +67,7 @@
 
 ## 4. 待办
 
-审查未修项以 `docs/reviews/BACKLOG.md` 为准。这里只留还要人去做的事。
+审查未修项以 `docs/reviews/BACKLOG.md` 为准。PR #44 待验证项见 CR-84，HERO 非阻塞传输层测试见 CR-97；充电测试已取消，不等待插拔充电操作。其它人工待办如下。
 
 1. **迈从充电标志**：插上充电线，看日志里的状态字节，补全 `ParseKeyboardV1Charge`（已知 0x10 位 = 充电中）。
 2. **雷柏充满**：放电 0x01、充电 0x02 已校准。充满时 `[7]` 还没采到，采到再补映射。
