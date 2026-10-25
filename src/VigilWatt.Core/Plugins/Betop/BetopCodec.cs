@@ -53,6 +53,13 @@ internal static class BetopCodec
     /// <summary>把 T9 原始电量字节（0~120）换算成百分比（0~100，四舍五入）。</summary>
     public static int T9ToPercent(byte raw) => (raw * 100 + T9BatteryFull / 2) / T9BatteryFull;
 
+    // 鲲鹏20 2.4G 接收器把电量广播放在杂项 usage page（而非厂商页 0xFF00）——
+    // 真机 2026-10-25 观察到该通道每秒广播 `02 15 <电量> 00 <充电位>`，页值报 0x00FF/0x0003
+    // （不同工具对 page/usage 读法有别，先两个都认，真机日志收敛后再收紧）。
+
+    /// <summary>杂项广播页：鲲鹏20 2.4G 接收器的电量广播通道页值，只听不写。</summary>
+    public static bool IsBroadcastUsagePage(ushort usagePage) => usagePage is 0x00FF or 0x0003;
+
     /// <summary>T9 被动状态流的解析结果。</summary>
     /// <param name="Percent">电量百分比（0~100）；<paramref name="Linked"/> 为 false 时无意义（是占位值）。</param>
     /// <param name="Charging">是否充电中（T9 流无充电标志字节，恒为 false）。</param>
