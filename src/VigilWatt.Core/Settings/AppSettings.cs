@@ -108,6 +108,11 @@ public class AppSettings
     /// 靠它挡住；设备重新上线时自动清除（用户删的是"离线条目"，设备回来了就该显示）。</summary>
     public ConcurrentDictionary<string, long> DismissedDevices { get; set; } = new();
 
+    /// <summary>用户"忽略"的设备：Id → 名称与时间。只过滤显示与历史写入，插件照常轮询，
+    /// 所以恢复后立刻有数据（与 <see cref="BlockedDevices"/> 的分工见 docs/project/code-flow.md §5.2）。
+    /// 并发字典：忽略发生在 UI 线程、查询发生在插件轮询线程。</summary>
+    public ConcurrentDictionary<string, IgnoredDevice> IgnoredDevices { get; set; } = new();
+
     /// <summary>日志级别。取值见 <see cref="VigilWatt.Core.Utils.LogLevelNames"/>（Off/Debug/Info/Warn/Error），默认 Info；未知取值按 Info。**重启生效**（启动时赋给 Log.MinLevel）。</summary>
     public string LogLevel { get; set; } = VigilWatt.Core.Utils.LogLevelNames.Default;
 
@@ -151,6 +156,7 @@ public class AppSettings
             _cached.DeviceCustomizations ??= new Dictionary<string, DeviceCustomization>();
             _cached.BlockedDevices ??= new ConcurrentDictionary<string, BlockedDevice>();
             _cached.DismissedDevices ??= new ConcurrentDictionary<string, long>();
+            _cached.IgnoredDevices ??= new ConcurrentDictionary<string, IgnoredDevice>();
 
             // 老 settings.json 缺新插件的开关键时补默认值：反序列化会用 JSON 里的字典**整体替换**默认字典，
             // 缺键的插件会被 DeviceManager/设置页的 TryGetValue 判成"关闭"，新增插件（如 Betop）装上去默认不工作、用户还以为是功能没实现。

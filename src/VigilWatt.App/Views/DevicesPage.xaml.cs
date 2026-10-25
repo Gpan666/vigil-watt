@@ -124,14 +124,24 @@ public sealed partial class DevicesPage : Page
         // 带上时间戳：即使设备数没变，用户也能一眼看出这次刷新确实跑过了
         SummaryText.Text = $"{online} 台在线 / 共 {devices.Count} 台 · {DateTime.Now:HH:mm:ss} 更新";
 
-        bool empty = devices.Count == 0;
-        DeviceList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
-        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
-
-        // 永久移除的设备不在列表里，恢复入口只有这一行，所以它必须跟着名单实时变
+        // 不在列表里的设备只能从这里恢复，所以两个入口都要跟着名单实时变
         int blocked = App.Services.Manager.BlockedDevices.Count;
         BlockedBar.Visibility = blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
         BlockedText.Text = $"已屏蔽 {blocked} 台设备 · 管理";
+
+        int ignored = App.Services.Manager.IgnoredDevices.Count;
+        IgnoredBar.Visibility = ignored > 0 ? Visibility.Visible : Visibility.Collapsed;
+        IgnoredText.Text = $"已忽略 {ignored} 台设备 · 管理";
+
+        HiddenBars.Visibility = blocked > 0 || ignored > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        bool empty = devices.Count == 0;
+        DeviceList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+        EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        // 全被忽略时还说"未发现设备"会把人引向"是不是没扫到"，得指向真正的恢复入口
+        EmptyHint.Text = ignored > 0
+            ? $"已忽略 {ignored} 台设备，可在下方恢复"
+            : "连接蓝牙设备或插入 2.4G 接收器，然后点击刷新";
     }
 
     private async void CustomizeDevice_Click(object sender, RoutedEventArgs e)
@@ -349,6 +359,16 @@ public sealed partial class DevicesPage : Page
         };
         customize.Click += CustomizeDevice_Click;
         menu.Items.Add(customize);
+
+        // 忽略对在线设备也开放：直连电源的设备永远在线，"删除"那条路永远走不到（issue #52）
+        var ignore = new MenuFlyoutItem
+        {
+            Text = "忽略此设备（不在列表显示）",
+            Tag = model.Id,
+        };
+        ignore.Click += IgnoreDevice_Click;
+        menu.Items.Add(ignore);
+
         menu.Items.Add(new MenuFlyoutSeparator());
 
         // 在线设备不给删：删了插件下一轮又报回来，等于什么都没做
@@ -458,7 +478,46 @@ public sealed partial class DevicesPage : Page
         Refresh();
     }
 
+    private void IgnoreDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem item || item.Tag is not string id) return;
+        // 可逆操作不弹确认框：底部「已忽略 N 台设备」就是恢复入口
+        if (!App.Services.Manager.IgnoreDevice(id))
+        {
+            _ = ShowMessageAsync("无法忽略", "设置写入失败，未忽略该设备。");
+            return;
+        }
+        Refresh();
+    }
+
     private async void ManageBlocked_Click(object sender, RoutedEventArgs e)
+        => await ShowManagedDialogAsync(
+            "已屏蔽的设备",
+            "没有已屏蔽的设备。",
+            () => App.Services.Manager.BlockedDevices
+                .Select(kv => (kv.Id, kv.Info.Name, kv.Info.BlockedAt, "屏蔽于")).ToList(),
+            "解除",
+            App.Services.Manager.UnblockDevice,
+            "解除失败：设置写入失败，未解除屏蔽。");
+
+    private async void ManageIgnored_Click(object sender, RoutedEventArgs e)
+        => await ShowManagedDialogAsync(
+            "已忽略的设备",
+            "没有已忽略的设备。",
+            () => App.Services.Manager.IgnoredDevices
+                .Select(kv => (kv.Id, kv.Info.Name, kv.Info.IgnoredAt, "忽略于")).ToList(),
+            "恢复",
+            App.Services.Manager.UnignoreDevice,
+            "恢复失败：设置写入失败，未恢复该设备。");
+
+    /// <summary>「已忽略 / 已屏蔽」共用一套列表：两份名单只差标题、时间前缀和动作，抄两份早晚会改漏一边。</summary>
+    private async Task ShowManagedDialogAsync(
+        string title,
+        string emptyText,
+        Func<IReadOnlyList<(string Id, string Name, DateTimeOffset At, string AtLabel)>> provider,
+        string actionLabel,
+        Func<string, bool> action,
+        string failureText)
     {
         var panel = new StackPanel { Spacing = 10 };
         // 失败提示只能写在框里：ContentDialog 同一 XamlRoot 同时只允许开一个，这里再弹一个会直接抛
@@ -473,7 +532,7 @@ public sealed partial class DevicesPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = "已屏蔽的设备",
+            Title = title,
             Content = root,
             CloseButtonText = "关闭",
         };
@@ -481,15 +540,15 @@ public sealed partial class DevicesPage : Page
         void Rebuild()
         {
             panel.Children.Clear();
-            var items = App.Services.Manager.BlockedDevices;
+            var items = provider();
             if (items.Count == 0)
             {
-                panel.Children.Add(new TextBlock { Text = "没有已屏蔽的设备。" });
+                panel.Children.Add(new TextBlock { Text = emptyText });
                 return;
             }
 
             var tertiary = Application.Current.Resources["TextFillColorTertiaryBrush"] as Brush;
-            foreach (var (id, info) in items)
+            foreach (var (id, name, at, atLabel) in items)
             {
                 var row = new Grid { ColumnSpacing = 12 };
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -498,30 +557,30 @@ public sealed partial class DevicesPage : Page
                 var text = new StackPanel { Spacing = 2 };
                 text.Children.Add(new TextBlock
                 {
-                    Text = string.IsNullOrWhiteSpace(info.Name) ? id : info.Name,
+                    Text = string.IsNullOrWhiteSpace(name) ? id : name,
                     FontSize = 14,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                 });
                 text.Children.Add(new TextBlock
                 {
-                    Text = $"屏蔽于 {info.BlockedAt:yyyy-MM-dd HH:mm}",
+                    Text = $"{atLabel} {at:yyyy-MM-dd HH:mm}",
                     FontSize = 11,
                     Foreground = tertiary,
                 });
                 row.Children.Add(text);
 
-                var unblock = new HyperlinkButton
+                var button = new HyperlinkButton
                 {
-                    Content = "解除",
+                    Content = actionLabel,
                     Tag = id,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
-                unblock.Click += (s, _) =>
+                button.Click += (s, _) =>
                 {
-                    if (s is not HyperlinkButton button || button.Tag is not string target) return;
-                    if (!App.Services.Manager.UnblockDevice(target))
+                    if (s is not HyperlinkButton clicked || clicked.Tag is not string target) return;
+                    if (!action(target))
                     {
-                        status.Text = "解除失败：设置写入失败，未解除屏蔽。";
+                        status.Text = failureText;
                         status.Visibility = Visibility.Visible;
                         return;
                     }
@@ -529,8 +588,8 @@ public sealed partial class DevicesPage : Page
                     Rebuild();
                     Refresh();
                 };
-                Grid.SetColumn(unblock, 1);
-                row.Children.Add(unblock);
+                Grid.SetColumn(button, 1);
+                row.Children.Add(button);
 
                 panel.Children.Add(row);
             }

@@ -75,15 +75,20 @@
                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
             <TextBlock Text="未发现设备" FontSize="15" HorizontalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            <TextBlock Text="连接蓝牙设备或插入 2.4G 接收器，然后点击刷新" FontSize="12"
+            <TextBlock x:Name="EmptyHint" Text="连接蓝牙设备或插入 2.4G 接收器，然后点击刷新" FontSize="12"
                        HorizontalAlignment="Center"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
         </StackPanel>
 
-        <!-- 已屏蔽设备入口：永久移除后设备不在列表里，恢复入口只能放这；没有屏蔽记录时整行隐藏 -->
-        <HyperlinkButton x:Name="BlockedBar" Grid.Row="2" Margin="0,4,0,0" Padding="0"
-                         HorizontalAlignment="Left" Click="ManageBlocked_Click" Visibility="Collapsed">
-            <TextBlock x:Name="BlockedText" FontSize="12" />
-        </HyperlinkButton>
+        <!-- 不在列表里的设备只能从这里恢复：忽略与永久移除是两套名单，各给一个入口；都为 0 时整行隐藏 -->
+        <StackPanel x:Name="HiddenBars" Grid.Row="2" Orientation="Horizontal" Spacing="16"
+                    Margin="0,4,0,0" HorizontalAlignment="Left" Visibility="Collapsed">
+            <HyperlinkButton x:Name="IgnoredBar" Padding="0" Click="ManageIgnored_Click" Visibility="Collapsed">
+                <TextBlock x:Name="IgnoredText" FontSize="12" />
+            </HyperlinkButton>
+            <HyperlinkButton x:Name="BlockedBar" Padding="0" Click="ManageBlocked_Click" Visibility="Collapsed">
+                <TextBlock x:Name="BlockedText" FontSize="12" />
+            </HyperlinkButton>
+        </StackPanel>
     </Grid>
 </Page>

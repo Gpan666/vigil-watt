@@ -108,8 +108,13 @@ public sealed class DeviceManager : IDisposable
         return list;
     }
 
+    /// <summary>对外可见的设备。忽略的在这里滤掉——设备页、托盘、贴片、小组件、统计页都读这个属性，一处生效。</summary>
     public IReadOnlyCollection<DeviceStatus> Devices => _devices.Values
+        .Where(d => !IsIgnored(d.Id))
         .OrderByDescending(d => d.IsOnline).ThenBy(d => d.DisplayName).ToList();
+
+    /// <summary>忽略只影响显示与历史写入，不影响入库：条目留在 <c>_devices</c> 里，恢复后立刻可见。</summary>
+    private bool IsIgnored(string id) => _settings.IgnoredDevices.ContainsKey(id);
 
     public DeviceStatus? Find(string id) => _devices.TryGetValue(id, out var d) ? d : null;
 
@@ -168,6 +173,8 @@ public sealed class DeviceManager : IDisposable
                 // 用户删掉/屏蔽的设备不要再从历史补回来（历史通常已随删除清掉，这里是纵深防御）
                 if (_settings.BlockedDevices.ContainsKey(stat.DeviceId)) continue;
                 if (_settings.DismissedDevices.ContainsKey(stat.DeviceId)) continue;
+                // 忽略的设备同样不补：它本来就不该出现在列表里
+                if (_settings.IgnoredDevices.ContainsKey(stat.DeviceId)) continue;
 
                 // 用户主动关掉的品牌插件，不要靠历史记录把它"复活"成离线条目——
                 // 那会让"关了开关却还显示"的老问题换个形式回来。
@@ -488,6 +495,48 @@ public sealed class DeviceManager : IDisposable
         return true;
     }
 
+    /// <summary>已忽略设备快照（「已忽略设备」列表用），按忽略时间倒序。</summary>
+    public IReadOnlyList<(string Id, IgnoredDevice Info)> IgnoredDevices => _settings.IgnoredDevices
+        .OrderByDescending(kv => kv.Value.IgnoredAt)
+        .Select(kv => (kv.Key, kv.Value))
+        .ToList();
+
+    /// <summary>忽略一台设备：在线也能用（直连电源的设备永远在线，删除那条路走不到）。
+    /// 名单先落盘再发事件，写盘失败就回滚——否则内存里忽略了、重启又冒出来。</summary>
+    public bool IgnoreDevice(string id)
+    {
+        if (!_devices.TryGetValue(id, out var device)) return false;
+        _settings.IgnoredDevices[id] = new IgnoredDevice
+        {
+            Name = device.DisplayName,
+            IgnoredAt = DateTimeOffset.Now,
+        };
+        if (!_settings.Save())
+        {
+            _settings.IgnoredDevices.TryRemove(id, out _);
+            Log.Error($"忽略设备失败：settings.json 写入失败 {device.DisplayName}");
+            return false;
+        }
+        Log.Info($"已忽略设备: {device.DisplayName} ({id})");
+        DevicesChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>恢复被忽略的设备。数据一直在 <c>_devices</c> 里，摘掉名单就立刻回到列表。</summary>
+    public bool UnignoreDevice(string id)
+    {
+        if (!_settings.IgnoredDevices.TryRemove(id, out var removed)) return false;
+        if (!_settings.Save())
+        {
+            _settings.IgnoredDevices[id] = removed;
+            Log.Error($"恢复忽略失败：settings.json 写入失败 {id}");
+            return false;
+        }
+        Log.Info($"已恢复设备: {removed.Name} ({id})");
+        DevicesChanged?.Invoke();
+        return true;
+    }
+
     /// <summary>只认领、不读电量（见 RequestDiscoveryAsync）。各插件慢探测并行，Upsert 仍在本线程。</summary>
     private async Task DiscoverOnlyAsync()
     {
@@ -620,7 +669,7 @@ public sealed class DeviceManager : IDisposable
         {
             foreach (var d in _devices.Values)
             {
-                if (d.IsOnline && d.BatteryPercent.HasValue)
+                if (d.IsOnline && d.BatteryPercent.HasValue && !IsIgnored(d.Id))
                     _history.Insert(DeviceCustomizationResolver.ApplyName(d, _settings.DeviceCustomizations));
                 RefreshRemainingTimeEstimate(d, notify: true);
             }
@@ -671,10 +720,13 @@ public sealed class DeviceManager : IDisposable
         // 占位条目一旦被真实来源接管（重新上线），就不再按占位规则过期剔除
         if (status.IsOnline) _tombstoneIds.TryRemove(status.Id, out _);
 
+        // 忽略的设备照常入库（恢复要立刻回来），但不再产生新采样、不再提醒
+        bool ignored = IsIgnored(status.Id);
+
         if (changed)
         {
             // 电量变化立即写一条历史（含从离线恢复）
-            if (status.BatteryPercent.HasValue)
+            if (status.BatteryPercent.HasValue && !ignored)
                 _history.Insert(DeviceCustomizationResolver.ApplyName(status, _settings.DeviceCustomizations));
             DeviceUpdated?.Invoke(status);
         }
@@ -684,7 +736,7 @@ public sealed class DeviceManager : IDisposable
             DeviceUpdated?.Invoke(status);
         }
 
-        CheckLowBattery(status, previousPercent);
+        if (!ignored) CheckLowBattery(status, previousPercent);
         RefreshRemainingTimeEstimate(status, notify: true);
     }
 
