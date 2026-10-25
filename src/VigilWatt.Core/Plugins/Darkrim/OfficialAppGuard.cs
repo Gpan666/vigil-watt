@@ -6,7 +6,7 @@ namespace VigilWatt.Core.Plugins.Darkrim;
 /// 功 能： 判断官方 DARKRIM 客户端是否在跑，在跑就让出 dongle 队列。
 /// 2026/10/23 19:05:00 zc165
 /// 官方客户端常驻托盘（HKCU Run 带 --startup-minimized），句柄一直开着；
-/// 两边撞同一个应答队列会让 dongle 重置链路、耳机断连。见 protocols.md §13.6。
+/// 两边撞同一个应答队列会让 dongle 重置链路、耳机断连。见 darkrim.md §1.7。
 /// </summary>
 internal static class OfficialAppGuard
 {

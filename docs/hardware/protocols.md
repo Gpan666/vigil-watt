@@ -63,7 +63,7 @@
 - **会写帧的插件默认关闭**，开关本身就是写入授权；别在认领判据里放宽到「同 VID 就试」。
 
 
-## 2. 官方资料地图（抓包/查协议用）
+## 3. 官方资料地图（抓包/查协议用）
 
 - M HUB WEB（网页驱动）：https://www.mchose.com.cn/#/home → `#/connectDevice`，支持列表明确含 **G87 Series**
 - CZ 键盘驱动 SPA：`https://www.mchose.com.cn/cizhou/CZ_SHARED_DATA/asset-manifest.json`（内含 layout-g87_v2.js）

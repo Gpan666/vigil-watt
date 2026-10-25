@@ -11,6 +11,20 @@
 >
 > 第一个 `##` 之前的内容只给维护者看，应用不渲染。发版前把当前版本段补上，否则应用内显示"本版本没有更新说明"。
 
+## 1.3.0
+
+2026-10-25
+
+- 新增 8 个品牌：华硕 ROG、雷蛇、AKG、ATK、HyperX、凌豹、VGN、Haute42
+- 键盘新增 7 款：迈从 G75 Pro、ATK A98 Pro、凌豹 K98、狼蛛 F108 Pro 与 HERO 68 Air、VGN V98 Pro、华硕 ROG Scope II 96
+- 鼠标新增 11 款：迈从 G3 V2 与 A5 V2 Ultra、雷蛇毒蝰 V4 Pro 与 Viper V3 Pro SE、凌豹 M5PRO Max、VGN 蜻蜓 F1 V5 与 F2 大师+、ATK F1 Pro Max 与 F1 Ultimate 2.0 与 F1 V3 ULTIMATE+、狼蛛 L9 Ultra
+- 耳机新增 9 款：罗技 PRO X 2、迈从 X9、雷蛇黑鲨 V2 Pro 与 Kraken V4、狼蛛 G9、AKG N9 Hybrid、索尼 INZONE H9 II、HECATE G3M Pro 升级版、HyperX Cloud Flight 2
+- 手柄新增 2 款：北通鲲鹏20（2.4G 与有线两种接法显示成同一台）、Haute42 Adapter 4DS 格斗手柄适配器
+- 新增「设备诊断」页：没适配的设备可以只读采集它的 USB/HID 报文，导出后发给维护者就能加支持
+- 设备列表右键可「忽略此设备」，在线的设备也能隐藏，底部一行随时恢复
+- 需要向设备发查询命令的默认关闭，到设置页打开对应品牌的开关即可；同品牌的键盘、鼠标、耳机共用一个开关
+- 修复关掉插件后点刷新会直接退出、历史曲线时间显示成 UTC、设备列表图标错位
+
 ## 1.2.3
 
 2026-10-21

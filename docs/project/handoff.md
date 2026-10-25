@@ -6,9 +6,9 @@
 
 ## 1. 当前状态
 
-新增适配：雷蛇 Viper V3 Pro SE、BlackShark V2 Pro 2023 与 ROG Scope II 96 / Omni 电量；新品牌默认关。协议与验证边界见 [razer-viper-se.md](../hardware/razer-viper-se.md)、[razer-headset.md](../hardware/razer-headset.md)、[asus-rog.md](../hardware/asus-rog.md)。
+新增适配：8 个新品牌（华硕 ROG、雷蛇、AKG、ATK、HyperX、凌豹、VGN、Haute42）与北通鲲鹏20 三通道、狼蛛 G9 / L9 / F108 Pro、VGN V98 Pro、迈从 G75 Pro / A5 V2 Ultra / X9、凌豹 K98、ATK A98 Pro、AULA HERO 68 Air 等，合计约 29 台；新品牌默认关。逐台状态见 §2 表，协议与验证边界见对应 `hardware/*.md`。
 
-当前安装包 **1.2.3**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
+当前安装包 **1.3.0**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
 
 本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）、罗技 Bolt 接收器（C548）+ MX Master 3S。本机电量可选，默认关。**其余机型均为贡献者真机、本机未复测，逐台状态见 §2 表**——别把 §2 里「贡献者真机」当成我们验过。
 
@@ -22,7 +22,7 @@
 
 设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
-`#44` / `#48` / `#58` / `#47` / `#53` / `#29` / `#34` 已合入（2026-10-25）：HERO 68 Air、AKG N9 Hybrid、ATK 两款鼠标、HyperX CF2、华硕 ROG Scope II 96、雷蛇黑鲨 V2 Pro / 毒蝰 V3 Pro SE 九台设备均继承 `BatteryPluginBase`。会写帧的（HERO、N9、ATK、华硕、雷蛇）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧；雷蛇 Viper V3 Pro SE 只开零权限 Feature 句柄。HECATE 自 #47 改主动查询、开关默认关。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99，HECATE 查询阻塞见 CR-100；协议与验证边界见 `hardware/aula.md` §2、`akg.md`、`atk.md`、`hyperx-cf2.md`、`asus-rog.md`、`razer*.md`、`hecate.md` §3。
+`#44` / `#48` / `#58` / `#47` / `#53` / `#29` / `#34` / `#31` / `#28` / `#20` / `#60` 已合入（2026-10-25），约 29 台设备均继承 `BatteryPluginBase`；后四个 PR 另带来狼蛛 G9 / L9、VGN V98 Pro、ATK A98 Pro、迈从 X9 与 A5 V2 Ultra、雷蛇 Kraken V4、Haute42 与鲲鹏20 三通道。会写帧的（HERO、N9、ATK、华硕、雷蛇）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧；雷蛇 Viper V3 Pro SE 只开零权限 Feature 句柄。HECATE 自 #47 改主动查询、开关默认关。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99，HECATE 查询阻塞见 CR-100；协议与验证边界见 `hardware/aula.md` §2、`akg.md`、`atk.md`、`hyperx-cf2.md`、`asus-rog.md`、`razer*.md`、`hecate.md` §3。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
