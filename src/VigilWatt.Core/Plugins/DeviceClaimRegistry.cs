@@ -9,7 +9,10 @@ namespace VigilWatt.Core.Plugins;
 /// </summary>
 public sealed class DeviceClaimRegistry
 {
-    private readonly ConcurrentDictionary<string, string> _ownerByPath = new();
+    // 路径大小写不敏感：Windows 的 HID 路径会以 HID#A / hid#a 两种形式出现，
+    // 按区分大小写存会让"同一个接口"被认领两次。
+    private readonly ConcurrentDictionary<string, string> _ownerByPath =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>认领接口。返回 false = 已被其他插件持有。</summary>
     public bool TryClaim(string devicePath, string pluginName)

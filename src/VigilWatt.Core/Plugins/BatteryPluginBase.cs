@@ -92,6 +92,18 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     protected virtual string IdFor(string devicePath) => $"{Name.ToLowerInvariant()}:{PluginUtils.StableDeviceHash(devicePath)}";
 
     /// <summary>
+    /// 设备 ID 的设备维度形式：默认仍走 <see cref="IdFor"/>（路径哈希）。
+    /// 需要芯片/机身身份的插件覆写它，换 USB 口才不会重复建条目。
+    /// </summary>
+    protected virtual string BuildDeviceId(HidDeviceInfo info) => IdFor(info.DevicePath);
+
+    /// <summary>打开句柄：测试覆写注入假句柄，生产路径走 <see cref="HidDeviceInfo.Open"/>。</summary>
+    protected virtual HidDeviceHandle OpenDevice(HidDeviceInfo info) => info.Open();
+
+    /// <summary>同一插件里不同型号代价不同时覆写（迈从鼠标 60 秒、键盘 10 秒）。</summary>
+    protected virtual TimeSpan ResolveProbeCooldown(HidDeviceInfo info) => ProbeCooldown;
+
+    /// <summary>
     /// <see cref="Probe"/> 是否会向设备写帧：写帧的插件（迈从会话帧 / 北通查询）保持默认 true，
     /// 零写入探测（雷柏、英菲克纯被动）置 false。这是**机制事实**声明，与用户开关无关。
     /// </summary>
@@ -123,6 +135,8 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         public bool OfflineRequested;
         /// <summary>本轮刚由探测建立（探测返回值就是最新读数）：本轮 Poll 跳过、下一轮起正常轮询。</summary>
         public bool FreshlyClaimed;
+        /// <summary>插件要求下一轮重新探测本接口（物理身份变了等）：先释放旧句柄与认领，再重探。</summary>
+        public bool NeedsReprobe;
         /// <summary>与后台被动监听互斥，保护单悬空 ReadInput / 写读会话。</summary>
         public readonly object IoGate = new();
         /// <summary>最近一次被动监听收到**任何**报文的时间（用于沉默离线；不是"解析成功"的时间）。</summary>
@@ -172,8 +186,10 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     protected virtual IReadOnlyCollection<string> SkipPathsForThisPass(
         IReadOnlyList<HidDeviceInfo> availableDevices) => Array.Empty<string>();
 
-    private readonly Dictionary<string, TrackedDevice> _devices = new();   // key = DevicePath
-    private readonly Dictionary<string, DateTimeOffset> _probeFailedAt = new();
+    // 大小写不敏感：Windows 的 HID 路径会以两种大小写形式出现（HID#A / hid#a），
+    // 当成两条会重复建条目、还会漏释放句柄。
+    private readonly Dictionary<string, TrackedDevice> _devices = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTimeOffset> _probeFailedAt = new(StringComparer.OrdinalIgnoreCase);
     private DeviceClaimRegistry _claims = null!;
 
     public virtual async Task<IReadOnlyList<DeviceStatus>> AttachAsync(
@@ -181,6 +197,28 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     {
         _claims = claims;
         var claimed = new List<DeviceStatus>();
+        var availablePaths = availableDevices
+            .Select(d => d.DevicePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // 先释放"这一轮扫描里已经不在"的接口：同轮重连（旧路径消失、新路径出现）时，
+        // 旧条目必须先下线，否则新接口会被当成重复设备、或者与旧条目并成一条。
+        // 空扫描视为枚举失败（同 ReconcileRemovals），不动任何条目。
+        if (availableDevices.Count > 0)
+        {
+            foreach (var path in _devices.Keys.ToList())
+            {
+                if (availablePaths.Contains(path)) continue;
+                if (!_devices.Remove(path, out var gone)) continue;
+                StopPassiveListen(gone);
+                gone.Handle.Dispose();
+                gone.Status.IsOnline = false;
+                gone.Status.LastUpdated = DateTimeOffset.Now;
+                _claims.Release(path, Name);
+                Log.Info($"{DisplayName} 设备已移除: {path}");
+                claimed.Add(gone.Status);
+            }
+        }
 
         // 同一物理设备的多接口合并：先释放被跳过的接口，否则它会一直留在列表里当第二行。
         var skipPaths = SkipPathsForThisPass(availableDevices);
@@ -197,8 +235,10 @@ public abstract class BatteryPluginBase : IBatteryPlugin
 
         // 第一遍（快）：已有设备直接返回；筛出本轮需要新探测的接口（冷却中/被他人认领的跳过）
         var toProbe = new List<HidDeviceInfo>();
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var info in availableDevices)
         {
+            if (!seenPaths.Add(info.DevicePath)) continue;   // 同一次扫描里的路径大小写别名
             if (skipSet.Contains(info.DevicePath)) continue;
             if (!IsCandidate(info)) continue;
 
@@ -215,15 +255,26 @@ public abstract class BatteryPluginBase : IBatteryPlugin
                 continue;
             }
 
-            if (_devices.TryGetValue(info.DevicePath, out var known))
+            if (_devices.TryGetValue(info.DevicePath, out var known) && !known.NeedsReprobe)
             {
                 known.Info = info;   // 重扫后元数据可能更新
                 claimed.Add(known.Status);
                 continue;
             }
 
+            // 插件要求重探（物理身份变了）：先放掉旧句柄与认领，同一路径稍后重新探测。
+            if (_devices.Remove(info.DevicePath, out var stale))
+            {
+                StopPassiveListen(stale);
+                stale.Handle.Dispose();
+                stale.Status.IsOnline = false;
+                stale.Status.LastUpdated = DateTimeOffset.Now;
+                claimed.Add(stale.Status);
+                _claims.Release(info.DevicePath, Name);
+            }
+
             if (_probeFailedAt.TryGetValue(info.DevicePath, out var failedAt) &&
-                DateTimeOffset.Now - failedAt < ProbeCooldown)
+                DateTimeOffset.Now - failedAt < ResolveProbeCooldown(info))
                 continue;
 
             if (!claims.TryClaim(info.DevicePath, Name)) continue;   // 已被其他插件认领
@@ -255,7 +306,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         var gone = new List<DeviceStatus>();
         foreach (var path in _devices.Keys.ToList())
         {
-            if (availableDevices.Any(d => d.DevicePath == path)) continue;
+            if (availableDevices.Any(d => StringComparer.OrdinalIgnoreCase.Equals(d.DevicePath, path))) continue;
             if (_devices.Remove(path, out var dev))
             {
                 StopPassiveListen(dev);
@@ -280,7 +331,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         HidDeviceHandle? handle = null;
         try
         {
-            handle = FeatureOnly(info) ? info.OpenFeature() : info.Open();
+            handle = FeatureOnly(info) ? info.OpenFeature() : OpenDevice(info);
             var probe = await ProbeAsync(handle).ConfigureAwait(false);
             if (probe == null)
             {
@@ -307,6 +358,17 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         => Task.Run(() => Probe(handle));
 
     /// <summary>落地探测结果（写字典 + 发认领）。</summary>
+    /// <summary>同一物理身份已挂在别的路径下时返回那条路径（用于释放重复接口）。</summary>
+    private string? ExistingPathOfSameDevice(string id, string path)
+    {
+        foreach (var kv in _devices)
+        {
+            if (StringComparer.OrdinalIgnoreCase.Equals(kv.Key, path)) continue;
+            if (string.Equals(kv.Value.Status.Id, id, StringComparison.Ordinal)) return kv.Key;
+        }
+        return null;
+    }
+
     private void CommitProbes(ProbeOutcome[] outcomes, List<DeviceStatus> claimed)
     {
         foreach (var o in outcomes)
@@ -319,9 +381,40 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             }
 
             var (protocol, percent, charging) = probe;
+
+            // 设备 ID 可能由插件按物理身份算（读芯片 ID 会失败）：失败就当这一轮探测没成，
+            // 句柄与认领都要还回去，否则会留下一条没有 ID 的设备和一个占着接口的句柄。
+            string id;
+            try
+            {
+                id = BuildDeviceId(o.Info);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"{DisplayName} 设备 ID 读取失败，本轮放弃: {o.Info.DevicePath}（{ex.Message}）");
+                o.Handle!.Dispose();
+                _claims.Release(o.Info.DevicePath, Name);
+                _probeFailedAt[o.Info.DevicePath] = DateTimeOffset.Now;
+                continue;
+            }
+
+            // 同一物理设备的另一条接口（插线后接收器 + 本体同时在场）：保留先认领的那条，
+            // 后来的把句柄与认领都还回去，避免列表里出现两行矛盾读数。
+            if (ExistingPathOfSameDevice(id, o.Info.DevicePath) is { } duplicateOf)
+            {
+                Log.Info($"{DisplayName} 同一设备的另一条接口已认领，释放: {o.Info.DevicePath}（同 {duplicateOf}）");
+                o.Handle!.Dispose();
+                _claims.Release(o.Info.DevicePath, Name);
+                continue;
+            }
+
+            // 同一台设备在本轮里先下线又在新路径上认领回来（同轮重连）：只报新的一条，
+            // 别让上层看到"离线 → 在线"两条同 ID 的快照。
+            claimed.RemoveAll(d => string.Equals(d.Id, id, StringComparison.Ordinal));
+
             var status = new DeviceStatus
             {
-                Id = IdFor(o.Info.DevicePath),
+                Id = id,
                 Name = BuildDisplayName(o.Info),
                 Source = Source,
                 Kind = ResolveKind(protocol),
@@ -668,6 +761,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// 的发现从分钟级压到秒级。
     /// </summary>
     protected static void RequestConfirm(TrackedDevice dev) => dev.ConfirmRequested = true;
+
+    /// <summary>请求下一轮重新探测本接口（物理身份变了、句柄身份不符等）：先释放旧句柄与认领，再重探。</summary>
+    protected static void RequestReprobe(TrackedDevice dev) => dev.NeedsReprobe = true;
 
     /// <summary>
     /// 标记"疑似离线"，交给 <see cref="OfflinePolicy.Confirm"/> 做延迟确认。

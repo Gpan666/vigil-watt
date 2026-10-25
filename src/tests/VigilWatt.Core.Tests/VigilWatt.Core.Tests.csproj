@@ -45,6 +45,11 @@
     <Compile Include="..\..\VigilWatt.Core\Plugins\Aula\AulaHero68Codec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Aula\AulaHero68PacketAssembler.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Ajazz\AjazzCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\BatteryPluginBase.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Settings\AppSettings.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Settings\IgnoredDevice.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Devices\DeviceBlocklist.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\IBatteryPlugin.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\BatteryReadingFilter.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\PluginUtils.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\DeviceClaimRegistry.cs" />
