@@ -31,6 +31,7 @@
 - [razer-kraken.md](hardware/razer-kraken.md)：Kraken V4 接收器的 64 字节 `0x02` 协议，电量与充电两条命令按轮交替。
 - [razer-viper-se.md](hardware/razer-viper-se.md)：Viper V3 Pro SE 无线电量、Windows Feature 接口与验证范围。
 - [dualsense.md](hardware/dualsense.md)：DualSense 蓝牙电量的帧、CRC 和未复测边界。
+- [haute42.md](hardware/haute42.md)：Haute42 Adapter 4DS——借 DualSense 号段的适配器，靠固件串认领、按芯片 ID 当设备身份。
 - [ganss.md](hardware/ganss.md)：GANSS GS3104T-Pro 的查询帧、认领判据风险与验证清单。
 - [akg.md](hardware/akg.md)：AKG N9 Hybrid 接收器查询、控制输入读取和验证边界。
 - [mchose-v9-pro.md](hardware/mchose-v9-pro.md)：MCHOSE V9 Pro 耳机的查询帧与未复测边界。

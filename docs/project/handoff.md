@@ -43,6 +43,7 @@
 | 狼蛛 AULA：F99 Pro（`3554:FA09`）/ G9 耳机（`38A6:0030`）/ L9 Ultra（`38A6:28FD`） | `0x13` 会话推送 / 被动 `AB 47 4D 86` / `0x81` 查询 | 三个协议类共用一个「狼蛛」开关（设置页一行）。F99/L9 默认关、会写帧；G9 纯被动。贡献者声明，本机未复测（aula.md §1 §3 §4） |
 | DELUX M900 Pro（VID_1D57&PID_FA65） | `0x000A` 被动 5 字节帧 | 代码已接入，默认关。与英菲克同 VID/PID；2026-10-19 本机没扫到 `1D57`（delux.md §1） |
 | DualSense（VID_054C&PID_0CE6） | 蓝牙 HID report `0x31` | 代码已接入，默认开、零写入。约 10% 一档。贡献者声明，本机未复测（dualsense.md） |
+| Haute42 Adapter 4DS（`054C:0CE6`，USB 侧） | 只读 feature：`0xF8` 固件串认领、`0xFA` 芯片 ID 当设备 ID、`0xF9` 电量/充电 | 代码已接入，默认关、**零写入**，与 DualSense 插件按 USB/蓝牙互斥。贡献者声明，本机未复测（haute42.md） |
 | GANSS GS3104T-Pro / 狼蛛 F108 Pro（VID_05AC&PID_024F） | 33 字节查询帧 `00 20 01 … 21` + 响应 `[3]`；两品牌同指纹，按产品名分 | 代码已接入，默认关。会写帧，不进 15 秒发现。设置页一行「高斯 / 狼蛛」。贡献者真机，本机未复测（ganss.md §7） |
 | 迈从耳机：V9 Pro（`291D:385D`）/ X9（`3837:6045`） | 64 字节查询帧 `55 65 01 …`，X9 与键鼠同号段、靠 `mi_00&col05` 分流 | 代码已接入（并入迈从插件，共用 `Mchose` 开关），默认关、会写帧。贡献者声明，本机未复测（mchose-v9-pro.md、mchose-x9.md） |
 | 北通 T9（PID_5073）/ 鲲鹏20（PID_5191） | 厂商接口 0xFF00；T9 走 Col04 被动流 | T9 已真机验证；鲲鹏20 主动查询未验证 |
@@ -56,8 +57,7 @@
 | 迈从 G75 Pro（VID_3554&PID_FA09） | 与 AULA F99 Pro 同指纹，靠会话 ACK 密码分流到迈从 | 代码已接入（并入迈从插件），默认关。会写帧。贡献者真机 ACK 型号 G75 Pro、`13 4A` = 36%，本机未复测（mchose.md §5） |
 | 凌豹 M5PRO Max（VID_3151&PID_402D）/ K98（VID_3554&PID_FA09） | 前者 feature 65 字节、官方驱动同款 `F7` 查询，`[5]` = 充电位；后者 `0x13` 会话，靠型号码 `0x0212` 与 AULA `0x0158` 分流 | 一个插件管两台（`ResolveKind` 按协议给图标），默认关、会写帧。贡献者真机 88%/95%（M5PRO Max）与 100%（K98），有线 `4026` 不认领，本机未复测（lingbao.md §1 §2） |
 | VGN：蜻蜓 F1 V5（`391D:1A23`/`1026`）/ F2 大师+（`3554:FB56`/`FB57`）/ V98 Pro（`320F:5088`） | kc2 配置帧 `0x06`（电量在 `payload[19]`）/ y2 `BatteryLevel` / V98 `0x1A` 查询 | 一个插件管键鼠，默认关、会写帧。插线后按序列号只留一条接口；贡献者真机，本机未复测（vgn.md） |
-| 黑爵 AK870（VID_3151&PID_4011） | feature `F7` 状态查询，`[2]` 电量 + `[4]` 在线 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
-| 雷神 ML903 NearLink Se（VID_369B&PID_0234） | `0xA0` 设备信息查询，TLV `0x0225` = 电量 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
+| 黑爵 AK870（`3151:4011`）/ 雷神 ML903 NearLink Se（`369B:0234`） | 分别是 feature `F7` 状态查询（`[2]` 电量 + `[4]` 在线）与 `0xA0` 设备信息 TLV `0x0225` | 代码已接入，默认关、会写帧。贡献者实机确认，本机未复测（ak870-ml903.md） |
 | EDIFIER W820NB | HFP 网关 `DEVPKEY_Device_BatteryLevel` | 已打通，与设置页一致 |
 | 华硕 AURA、Virtual Multitouch、lifeme 音箱、弱水时砂 2.4G（38FF:0001） | — | 与电量无关 / 无电量通道（rose.md），勿探测 |
 | 雷蛇（毒蝰 V4 Pro `1532:00E6`/`00E5`；BlackShark V2 Pro `1532:0555`；Viper V3 Pro SE `1532:00DF`） | 经典 90 字节 feature 查询；耳机独立 PA 协议；SE 只开零权限 Feature 句柄 | 代码已接入，默认关、会写帧。均贡献者真机、本机未复测；V4 Pro 有线 `0x84` 充电查询无应答，充电态 Unknown（razer.md、razer-headset.md、razer-viper-se.md） |

@@ -69,6 +69,7 @@
 | 凌豹 | `PluginEnabled["Lingbao"]` | **false** | M5PRO Max 发官方驱动同款 `F7` feature 查询；K98 只发 `13 05 01` 会话帧，按型号码 `0x0212` 与 AULA 区分。都不进 15 秒发现，见 `lingbao.md` |
 | GANSS / 狼蛛 F108 | `PluginEnabled["Ganss"]` | **false** | 发固定查询帧才能读电量；两个品牌同指纹共用这一行开关；不进 15 秒发现，见 `ganss.md` §7 |
 | DualSense | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；只读蓝牙 HID `054C:0CE6` |
+| Haute42 | `PluginEnabled["Haute42Gaming"]` | **false** | 只发 `HidD_GetFeature`（`0xF8` 固件串 / `0xFA` 芯片 ID / `0xF9` 电量），零写入；与 DualSense 插件按「USB / 蓝牙」互斥，见 `haute42.md` §5 |
 | ATK | `PluginEnabled["Atk"]` | **false** | 鼠标发 17 字节 op 帧、键盘发 VIA `02 96 24`；两条链路共用一个开关，见 `atk.md` §5 §7 |
 | HyperX | 无（纯被动） | **true** | `WritesEnabled => false` + `ProbeWrites => false`；dongle 固件只实现 interrupt OUT，写帧一律 `ERROR_INVALID_FUNCTION`，只读 `FF90` 推送帧 |
 

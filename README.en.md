@@ -82,6 +82,7 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | VGN Dragonfly F1 V5 Turbo+ / F2 Master+ / V98 Pro · kc2 config frame / y2 query / `0x1A` query | Implemented, off by default; writes frames. Wired duplicates dropped by serial number. Contributor hardware only |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
+| Haute42 Adapter 4DS (DualSense adapter) · read-only feature `0xF9` | Implemented, off by default; zero writes. Presents itself as a DualSense, identified by its firmware string. Contributor claim only |
 | GANSS GS3104T-Pro / LINGBAO F108 Pro · 33-byte query frame | Implemented, off by default; writes frames. Same HID fingerprint, one shared switch. Contributor hardware only |
 | MCHOSE V9 Pro / X9 headset · 64-byte query frame | Implemented, off by default; writes frames, shares the MCHOSE switch. V9 Pro verified by contributor, X9 contributor claim only |
 | MCHOSE A5 V2 Ultra · inverted Feature `0x11` query | Implemented, off by default; writes frames, shares the MCHOSE switch. Contributor claim only |

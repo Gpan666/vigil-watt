@@ -97,6 +97,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// </summary>
     protected virtual string BuildDeviceId(HidDeviceInfo info) => IdFor(info.DevicePath);
 
+    /// <summary>句柄维度：需要读芯片/机身标识的插件覆写这一个（默认退化成设备维度）。</summary>
+    protected virtual string BuildDeviceId(HidDeviceHandle handle) => BuildDeviceId(handle.Info);
+
     /// <summary>打开句柄：测试覆写注入假句柄，生产路径走 <see cref="HidDeviceInfo.Open"/>。</summary>
     protected virtual HidDeviceHandle OpenDevice(HidDeviceInfo info) => info.Open();
 
@@ -387,7 +390,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             string id;
             try
             {
-                id = BuildDeviceId(o.Info);
+                id = BuildDeviceId(o.Handle!);
             }
             catch (Exception ex)
             {

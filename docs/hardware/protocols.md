@@ -34,6 +34,7 @@
 | 狼蛛 AULA | L9 Ultra 鼠标（`0x81` 查询） | `38A6:28FD` | [aula.md](aula.md) §4 | 贡献者声明 |
 | VGN | V98 Pro 键盘（`0x1A` 查询） | `320F:5088` | [vgn.md](vgn.md) §3 | 贡献者声明 |
 | 索尼 | DualSense 蓝牙 | `054C:0CE6` | [dualsense.md](dualsense.md) | 贡献者真机 |
+| Haute42 | Adapter 4DS（DualSense 适配器，USB） | `054C:0CE6`（借用 DualSense 号） | [haute42.md](haute42.md) | 贡献者声明 |
 | GANSS | GS3104T-Pro | `05AC:024F` | [ganss.md](ganss.md) | 贡献者真机 |
 | CHERRY | PIXIU75（2.4G / 有线） | `046A:01E4` / `01E2` | [cherry.md](cherry.md) | 贡献者真机 |
 | 派世 PULSAR | X2 V2 | `3554:F508` | [pulsar.md](pulsar.md) | 贡献者真机 |
