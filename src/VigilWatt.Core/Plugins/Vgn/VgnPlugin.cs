@@ -5,19 +5,32 @@ using VigilWatt.Core.Utils;
 namespace VigilWatt.Core.Plugins.Vgn;
 
 /// <summary>
-/// 功 能： VGN 蜻蜓（Dragonfly）2.4G 鼠标插件：F1 V5 走 kc2 配置帧，F2 大师+ 走 y2 电量查询。
-/// 2026/10/19 新增；2026/10/21 并入 F2 大师+。
-/// 两套帧、接口判据与真机边界见 docs/hardware/vgn.md；会写帧，故默认关闭。
+/// 功 能： VGN 2.4G 插件：蜻蜓 F1 V5（kc2 配置帧）、F2 大师+（y2 查询）与 V98 Pro 键盘（0x1A 查询）。
+/// 2026/10/19 新增；2026/10/21 并入 F2 大师+；2026/10/25 并入 V98 Pro。
+/// 三套帧、接口判据与真机边界见 docs/hardware/vgn.md；会写帧，故默认关闭。
 /// </summary>
 public sealed class VgnPlugin : BatteryPluginBase
 {
     /// <summary>插件开关的键（插件开关即写入授权）。</summary>
     private const string SettingsKey = "Vgn";
 
+    private const string ProtocolKc2 = "vgn-kc2";
+    private const string ProtocolY2 = "vgn-y2";
+    private const string ProtocolV98Pro = "vgn-v98pro-1a";
+
+    /// <summary>V98 Pro 键盘的接收器（`320F:5088`，与蜻蜓不同号段、协议无关）。</summary>
+    public const ushort V98Vid = 0x320F;
+    public const ushort V98DonglePid = 0x5088;
+
     public override string Name => SettingsKey;
     public override string DisplayName => "VGN";
     public override string DisplayNameEn => "VGN";
-    public override DeviceKind Kind => DeviceKind.Mouse;
+
+    /// <summary>一个插件管鼠标与键盘：具体图标由 <see cref="ResolveKind"/> 按协议给。</summary>
+    public override DeviceKind Kind => DeviceKind.Unknown;
+
+    protected override DeviceKind ResolveKind(string protocol)
+        => protocol == ProtocolV98Pro ? DeviceKind.Keyboard : DeviceKind.Mouse;
 
     /// <summary>该协议没有可用的自发推送（只见过命令应答，没见过状态广播），只能主动问。</summary>
     protected override bool SupportsPassiveListen => false;
@@ -53,7 +66,14 @@ public sealed class VgnPlugin : BatteryPluginBase
         => VgnCodec.IsMatch(info.VendorId, info.ProductId, info.UsagePage, info.Usage,
                info.InputReportLength, info.OutputReportLength)
            || VgnY2Codec.IsMatch(info.VendorId, info.ProductId, info.UsagePage, info.Usage,
-               info.InputReportLength, info.OutputReportLength);
+               info.InputReportLength, info.OutputReportLength)
+           || IsV98ProInterface(info);
+
+    /// <summary>V98 Pro：`320F:5088` 的 0xFF1C/0x0092 集合，输出 ≥17 字节。</summary>
+    private static bool IsV98ProInterface(HidDeviceInfo info)
+        => info.VendorId == V98Vid && info.ProductId == V98DonglePid
+           && info.UsagePage == 0xFF1C && info.Usage == 0x0092
+           && info.OutputReportLength >= 17;
 
     /// <summary>这条接口属于 y2 协议（蜻蜓 F2 大师+ / Compx dongle）。</summary>
     private static bool IsY2(HidDeviceInfo info)
@@ -75,9 +95,14 @@ public sealed class VgnPlugin : BatteryPluginBase
         return VgnDevicePairing.WirelessPathsToSkip(refs);
     }
 
+    private static string ProtocolFor(HidDeviceInfo info)
+        => IsV98ProInterface(info) ? ProtocolV98Pro : IsY2(info) ? ProtocolY2 : ProtocolKc2;
+
     /// <summary>系统给的名字是 <c>Geek Yanxuan | Dragonfly F1 V5 Turbo+</c>，去掉厂商前缀。</summary>
     protected override string BuildDisplayName(HidDeviceInfo info)
     {
+        if (IsV98ProInterface(info)) return "VGN V98 Pro";
+
         var product = info.Product;
         if (string.IsNullOrWhiteSpace(product)) return "VGN 鼠标";
 
@@ -98,7 +123,9 @@ public sealed class VgnPlugin : BatteryPluginBase
         }
         Log.ResetOnce($"{handle.Info.DevicePath}|vgn-no-permit");
 
-        var reading = IsY2(handle.Info) ? QueryY2(handle) : Query(handle);
+        var protocol = ProtocolFor(handle.Info);
+        var reading = protocol == ProtocolV98Pro ? QueryV98Pro(handle)
+            : IsY2(handle.Info) ? QueryY2(handle) : Query(handle);
         if (reading == null)
         {
             Log.Debug($"VGN 探测无应答: {handle.Info.DevicePath}");
@@ -106,14 +133,15 @@ public sealed class VgnPlugin : BatteryPluginBase
         }
 
         Log.Info($"VGN 探测成功: 电量={reading.Value.Percent} 充电={reading.Value.Charging}");
-        return (IsY2(handle.Info) ? "vgn-y2" : "vgn-kc2", reading.Value.Percent, reading.Value.Charging);
+        return (protocol, reading.Value.Percent, reading.Value.Charging);
     }
 
     protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
     {
         if (!CanWrite(dev)) return null;
 
-        var reading = IsY2(dev.Handle.Info) ? QueryY2(dev.Handle) : Query(dev.Handle);
+        var reading = dev.Protocol == ProtocolV98Pro ? QueryV98Pro(dev.Handle)
+            : IsY2(dev.Handle.Info) ? QueryY2(dev.Handle) : Query(dev.Handle);
         if (reading == null)
         {
             // 失败自己数（基类那条路会熔断停写，见 Offline 注释）：够了只标离线，不停写
@@ -208,6 +236,25 @@ public sealed class VgnPlugin : BatteryPluginBase
                 Log.Debug($"VGN 电量应答: {percent}% {charging} 原始={Log.Hex(input)}");
                 return (percent, charging);
             }
+        }
+        return null;
+    }
+
+    /// <summary>V98 Pro：发一条 7 字节 0x1A 查询，在窗口内等电量回包。</summary>
+    private static (int Percent, ChargingState Charging)? QueryV98Pro(HidDeviceHandle handle)
+    {
+        if (!handle.WriteOutput(VgnV98ProCodec.BuildQueryReport(handle.Info.OutputReportLength),
+                TimeSpan.FromMilliseconds(500), quiet: true))
+            return null;
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+        while (DateTime.UtcNow < deadline)
+        {
+            var input = handle.ReadInput(TimeSpan.FromMilliseconds(250));
+            if (input == null) continue;
+            if (!VgnV98ProCodec.TryParse(input, out int percent, out var charging)) continue;
+            Log.Info($"VGN V98 Pro 电量: {percent}% {charging} 原始={Log.Hex(input)}");
+            return (percent, charging);
         }
         return null;
     }

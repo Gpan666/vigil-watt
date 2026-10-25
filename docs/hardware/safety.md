@@ -63,9 +63,9 @@
 | HECATE（查询型） | `PluginEnabled["HecateWireless"]` | **false** | 35BB:D3FB 只发 STATUS `08 03` / POWER `08 04` 两条只读查询；走 15 秒发现节拍，见 `hecate.md` §2 |
 | HECATE | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；仅读 `35BB:D00B` 的 report `0x04` |
 | DELUX | 无（纯被动） | **false** | 与英菲克同 VID/PID，只读 `0x000A`；本机未扫到接收器，故默认关 |
-| AULA | `PluginEnabled["Aula"]` | **false** | F99 Pro 发 `13 05 01`；HERO 68 Air 发固定 UUID/电量查询及必要分片 ACK；每片检查开关，不进 15 秒发现。见 `aula.md` §2 |
+| AULA | `PluginEnabled["Aula"]` | **false** | F99 Pro 发 `13 05 01`、HERO 68 Air 发固定 UUID 查询与分片 ACK、L9 发 `0B 81`；G9 耳机是同一开关下的纯被动插件（零写入）。见 `aula.md` §2 §3 §4 |
 | AKG | `PluginEnabled["Akg"]` | **false** | N9 Hybrid 接收器只发固定 `0CD6` 电量查询，控制输入读取结果，不重发；见 `akg.md` |
-| VGN | `PluginEnabled["Vgn"]` | **false** | 蜻蜓 F1 发配置帧 `0x06`（report ID `0xB3`/`0xB5`）、F2 发 `BatteryLevel` 查询；y2 靠 `ProbeCooldown` 兜住发现节拍，见 `vgn.md` §4 |
+| VGN | `PluginEnabled["Vgn"]` | **false** | 蜻蜓 F1 发配置帧 `0x06`（report ID `0xB3`/`0xB5`）、F2 发 `BatteryLevel` 查询、V98 Pro 发 7 字节 `0x1A` 查询；y2 靠 `ProbeCooldown` 兜住发现节拍，见 `vgn.md` §5 |
 | 凌豹 | `PluginEnabled["Lingbao"]` | **false** | M5PRO Max 发官方驱动同款 `F7` feature 查询；K98 只发 `13 05 01` 会话帧，按型号码 `0x0212` 与 AULA 区分。都不进 15 秒发现，见 `lingbao.md` |
 | GANSS / 狼蛛 F108 | `PluginEnabled["Ganss"]` | **false** | 发固定查询帧才能读电量；两个品牌同指纹共用这一行开关；不进 15 秒发现，见 `ganss.md` §7 |
 | DualSense | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；只读蓝牙 HID `054C:0CE6` |

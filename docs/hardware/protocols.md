@@ -28,6 +28,9 @@
 | VGN 蜻蜓 | F1 V5 Turbo+（2.4G / 有线） | `391D:1A23` / `1026` | [vgn.md](vgn.md) §1 | 贡献者真机 |
 | VGN 蜻蜓 | F2 大师+（接收器 / 有线） | `3554:FB56` / `FB57` | [vgn.md](vgn.md) §2 | 贡献者真机 80% |
 | 狼蛛 AULA | F108 Pro（与 GANSS 同指纹，按产品名分品牌） | `05AC:024F` | [ganss.md](ganss.md) §7 | 贡献者真机 |
+| 狼蛛 AULA | G9 耳机（被动状态帧） | `38A6:0030` | [aula.md](aula.md) §3 | 贡献者声明 |
+| 狼蛛 AULA | L9 Ultra 鼠标（`0x81` 查询） | `38A6:28FD` | [aula.md](aula.md) §4 | 贡献者声明 |
+| VGN | V98 Pro 键盘（`0x1A` 查询） | `320F:5088` | [vgn.md](vgn.md) §3 | 贡献者声明 |
 | 索尼 | DualSense 蓝牙 | `054C:0CE6` | [dualsense.md](dualsense.md) | 贡献者真机 |
 | GANSS | GS3104T-Pro | `05AC:024F` | [ganss.md](ganss.md) | 贡献者真机 |
 | CHERRY | PIXIU75（2.4G / 有线） | `046A:01E4` / `01E2` | [cherry.md](cherry.md) | 贡献者真机 |

@@ -63,8 +63,11 @@ public sealed partial class SettingsPage : Page
 
         // 插件开关动态生成：新插件（IBatteryPlugin 实现）自动出现在设置页。
         // 按 Name 排序而不是反射顺序：GetTypes() 的次序随编译/重构漂移，设置页条目会莫名其妙换位置。
+        // 同一个 Name 只出一行（AGENTS.md §9）：一个品牌的多套协议可以是多个插件类，但开关只有一个。
         bool first = true;
-        foreach (var plugin in App.Services.Manager.Plugins.OrderBy(p => p.Name, StringComparer.Ordinal))
+        foreach (var plugin in App.Services.Manager.Plugins
+                     .OrderBy(p => p.Name, StringComparer.Ordinal)
+                     .DistinctBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
             AddPluginRow(plugin, first);
             first = false;
