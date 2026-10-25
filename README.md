@@ -60,6 +60,7 @@
 |---|---|
 | 华硕 ROG Strix Scope II 96 Wireless · Omni 接收器 | 本机 95%、未充电已验证；默认关闭，见 [asus-rog.md](docs/hardware/asus-rog.md) |
 | 雷蛇 BlackShark V2 Pro (2023) · 1532:0555 | 本机 79%、未充电已验证；与鼠标共用雷蛇开关，见 [razer-headset.md](docs/hardware/razer-headset.md) |
+| 雷蛇 Kraken V4 耳机（接收器 `1532:056C`）· 64 字节 `0x02` 查询 | 已实现，默认关闭；会写帧，与鼠标共用雷蛇开关。贡献者声明，维护者未复测 |
 | 雷蛇 Viper V3 Pro SE · 无线接收器 `1532:00DF` | 本机电量查询已验证；默认关闭，见 [razer-viper-se.md](docs/hardware/razer-viper-se.md) |
 | 迈从 G87 · 2.4G `0x13` | 本机验证 |
 | 迈从新代 dongle · QHW（如 `3837:3033`） | 已实现，待对应设备验证 |
@@ -84,6 +85,7 @@
 | DualSense · 蓝牙 HID 被动电量 | 已实现，默认开启；贡献者真机，维护者未复测 |
 | GANSS GS3104T-Pro / 狼蛛 F108 Pro · 33 字节查询帧 | 已实现，默认关闭；会写帧。两者同指纹共用一行开关。贡献者真机，维护者未复测 |
 | MCHOSE V9 Pro / X9 耳机 · 64 字节查询帧 | 已实现，默认关闭；会写帧，与迈从键鼠共用开关。V9 Pro 贡献者真机，X9 贡献者声明，维护者均未复测 |
+| MCHOSE A5 V2 Ultra · 反码 Feature `0x11` 查询 | 已实现，默认关闭；会写帧，与迈从键鼠共用开关。贡献者声明，维护者未复测 |
 | CHERRY PIXIU75 · 64 字节块协议（块 `0x1A`） | 已实现，默认关闭；会写帧。贡献者真机，维护者未复测 |
 | 派世 Pulsar X2 V2 · 17 字节 STATUS/POWER | 已实现，默认关闭；会写帧。贡献者真机，维护者未复测 |
 | 黑爵 AK870 · feature `F7` 状态查询 | 已实现，默认关闭；会写帧。贡献者真机，维护者未复测 |

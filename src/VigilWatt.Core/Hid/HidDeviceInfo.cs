@@ -111,15 +111,28 @@ public sealed class HidDeviceHandle : IDisposable
         _handle = handle;
     }
 
-    /// <summary>发送 feature report 并立即读回同 ID 的响应（HidD 同步调用，自带设备层超时）；buffer[0] 必须是 report ID。</summary>
-    public byte[]? GetFeature(byte reportId)
+    /// <summary>读 feature report（HidD 同步调用，自带设备层超时）；buffer[0] 是 report ID。</summary>
+    public byte[]? GetFeature(byte reportId, int? reportLength = null)
+        => GetFeature(reportId, out _, reportLength);
+
+    /// <summary>
+    /// 同上，失败时给出 Win32 错误码。<paramref name="reportLength"/> 指定单条报文长度（默认接口最大长度）：
+    /// 同一 collection 里常混着长短不同的 report，按最大长度读会拿到错位的数据。
+    /// </summary>
+    public byte[]? GetFeature(byte reportId, out int error, int? reportLength = null)
     {
-        ushort len = Info.FeatureReportLength;
+        error = 0;
+        ushort len = (ushort)(reportLength ?? Info.FeatureReportLength);
         if (len == 0) return null;
+        if (len > Info.FeatureReportLength) throw new ArgumentOutOfRangeException(nameof(reportLength));
+
         var buffer = new byte[len];
         buffer[0] = reportId;
         if (!NativeHid.HidD_GetFeature(_handle, buffer, len))
+        {
+            error = Marshal.GetLastWin32Error();
             return null;
+        }
         return buffer;
     }
 
@@ -174,11 +187,13 @@ public sealed class HidDeviceHandle : IDisposable
         return NativeHid.HidD_SetOutputReport(_handle, buffer, (uint)buffer.Length);
     }
 
-    /// <summary>发送 feature report（带自定义 payload），成功后可选择立刻读回。</summary>
-    public bool SetFeature(byte reportId, byte[] payload)
+    /// <summary>发 feature report；<paramref name="reportLength"/> 含 report ID，默认接口最大长度。</summary>
+    public bool SetFeature(byte reportId, byte[] payload, int? reportLength = null)
     {
-        ushort len = Info.FeatureReportLength;
+        ushort len = (ushort)(reportLength ?? Info.FeatureReportLength);
         if (len == 0) return false;
+        if (len > Info.FeatureReportLength) throw new ArgumentOutOfRangeException(nameof(reportLength));
+
         var buffer = new byte[len];
         buffer[0] = reportId;
         Array.Copy(payload, 0, buffer, 1, Math.Min(payload.Length, len - 1));

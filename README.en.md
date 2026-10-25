@@ -84,6 +84,7 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
 | GANSS GS3104T-Pro / LINGBAO F108 Pro · 33-byte query frame | Implemented, off by default; writes frames. Same HID fingerprint, one shared switch. Contributor hardware only |
 | MCHOSE V9 Pro / X9 headset · 64-byte query frame | Implemented, off by default; writes frames, shares the MCHOSE switch. V9 Pro verified by contributor, X9 contributor claim only |
+| MCHOSE A5 V2 Ultra · inverted Feature `0x11` query | Implemented, off by default; writes frames, shares the MCHOSE switch. Contributor claim only |
 | CHERRY PIXIU75 · 64-byte block protocol (block `0x1A`) | Implemented, off by default; writes frames. Contributor hardware only |
 | Pulsar X2 V2 · 17-byte STATUS/POWER | Implemented, off by default; writes frames. Contributor hardware only |
 | AJAZZ AK870 · feature `F7` status query | Implemented, off by default; writes frames. Contributor hardware only |

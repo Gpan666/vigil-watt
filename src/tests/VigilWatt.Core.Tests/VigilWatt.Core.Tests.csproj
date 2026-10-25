@@ -56,6 +56,8 @@
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseGmouseCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseV9ProCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseX9Codec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseA5Codec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseMouseProtocol.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseInterfaceClassifier.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Lingbao\LingbaoCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Compx\CompxSessionAck.cs" />
@@ -72,6 +74,7 @@
     <Compile Include="..\..\VigilWatt.Core\Plugins\Delux\DeluxCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Delux\DockChargeFilter.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Razer\RazerKrakenCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Sony\InzoneCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Ganss\GanssCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Sony\DualSenseCodec.cs" />
