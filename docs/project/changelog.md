@@ -13,6 +13,10 @@
 
 - **合并 #48**：接入 ATK 无线鼠标（F1 Pro Max / F1 V3 ULTIMATE+，3 个接收器 PID + 2 个本体 PID）与 HyperX Cloud Flight 2 耳机。ATK 走 `FF02` 口 17 字节主动查询、默认关，响应须过运行时校验和才采信；HyperX 只听 `FF90` 推送、零写入、默认开。设备 ID 按实测配对表归一，接收器与本体共一条、两只鼠标互不合并。见 `hardware/atk.md`、`hardware/hyperx-cf2.md`。
 
+- **合并 #58**：接入华硕 ROG Strix Scope II 96 Wireless（Omni `0B05:1ACE`）与雷蛇 BlackShark V2 Pro 2023（`1532:0555`）、Viper V3 Pro SE（`1532:00DF`）。三台的判据各不相同：华硕要按物理接收器分组核实通道 2 配对型号才查询，雷蛇耳机每轮进出会话一条查询、`finally` 释放，SE 只开**零访问权限的 Feature 句柄**。为此基类加了 `FeatureOnly` / `MinValidPercent` 两个钩子、`HidDeviceInfo` 加了 `OpenFeature()`，`MinValidPercent` 默认值与原行为一致，其它品牌不受影响。两个开关默认关。见 `hardware/asus-rog.md`、`razer-headset.md`、`razer-viper-se.md`。
+
+- **合并 #47**：HECATE G5M Pro 改主动查询（`04 00 00 1A`），电量不再依赖 HECATE Connect，离线改按连续 3 次查询无应答判（GANSS 同款）。**行为变更**：`Hecate` 开关默认由开改为关，老用户需在设置页手动打开；不进 15 秒发现档。收口时保留了 #49 的 `hecate.md` §2（PR 原本会整段删掉 D3FB 接收器协议，已顺延为 §3），并去掉 `WritesEnabled` 硬编码，回到「插件开关即写入授权」。见 `hardware/hecate.md` §3。
+
 ## 2026-10-24
 
 - **采集支持「手动发帧」（唯一写入路径）**：会话型通道（迈从 `0x13` 等）要主机先发帧才回，纯被动只能看到应答、看不到请求，写不出适配器。现在开始前勾「允许向设备发送」，该会话才以读写方式打开句柄（`OpenReadWrite`），运行态出现「手动发帧」卡片；每次发送有二次确认，帧写进 `records.jsonl`（`layer=hid-api-output`、`status=sent`），记录列表用 `→` + 「发出」标方向。长度与 report ID 先按 caps 校验。**不勾选时句柄仍只有 `GENERIC_READ`，从权限层面写不了。** 顺带修 `FailedRecords` 原来按「总数-收到」算、会把主机发出的帧算成失败。

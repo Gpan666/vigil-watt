@@ -44,6 +44,7 @@
 | **CR-96** | 采集句柄的释放不保证：`UsbHidCaptureSource.Dispose()` 是空实现，句柄在 `RunAsync` 的 `using` 里；pump 卡在同步 `HidD_GetFeature` 时，「暂停 = 释放句柄」不成立，`StopSourceAsync` 3 秒超时后来源仍在跑 | `Capture/Hid/UsbHidCaptureSource.cs:RunAsync`、`Capture/CaptureSession.cs:StopSourceAsync` | `open` |
 | **CR-98** | ATK 显示名依赖本体：接收器只报通用名 `Wireless mouse 8k dongle-M`，型号只能从插线时枚举出的本体取，`ModelNames` 是进程内缓存 → 重启后名字退回通用名，要再插一次线或用户自定义改名才恢复 | `Plugins/Atk/AtkPlugin.cs:BuildDisplayName`、`Plugins/Atk/AtkPlugin.cs:ModelNames`（atk.md §4.1） | `open` |
 | **CR-99** | ATK 设备归一组是硬编码配对表（`101B`/`101A`/`1015` → promax、`1303`/`12A9` → v3），新 PID 必须补一行；未登记 PID 在插充电线时会多出一条记录（上游路径哈希行为）。同机两只同型号鼠标会被并成一条，与 CR-74 同源 | `Plugins/Atk/AtkPlugin.cs:DeviceGroups`（atk.md §4） | `open` |
+| **CR-100** | HECATE 主动查询最坏约 2.9 秒堵在 `Poll` 里（3 次 × (500ms 写超时 + 750ms 听) + 2 × 300ms 间隔），鼠标关机/深度休眠时每轮都走满，与 CR-91 同源；未实测对其它插件轮询节奏的影响 | `Plugins/Hecate/HecatePlugin.cs:PollDevice`、`QueryAsync`（hecate.md §3） | `open` |
 
 ## 重构候选（未做）
 

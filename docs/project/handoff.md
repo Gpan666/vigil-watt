@@ -22,7 +22,7 @@
 
 设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
-`#44` / `#48` 已合入（2026-10-25）：HERO 68 Air、AKG N9 Hybrid、ATK 两款鼠标、HyperX CF2 五台设备均继承 `BatteryPluginBase`。会写帧的（HERO、N9、ATK）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99；协议与验证边界见 `hardware/aula.md` §2、`hardware/akg.md`、`hardware/atk.md`、`hardware/hyperx-cf2.md`。
+`#44` / `#48` / `#58` / `#47` 已合入（2026-10-25）：HERO 68 Air、AKG N9 Hybrid、ATK 两款鼠标、HyperX CF2、华硕 ROG Scope II 96、雷蛇黑鲨 V2 Pro / 毒蝰 V3 Pro SE 九台设备均继承 `BatteryPluginBase`。会写帧的（HERO、N9、ATK、华硕、雷蛇）默认关且不进 15 秒常规发现，纯被动的 CF2 默认开。ATK 认领按「配对组」判、两只鼠标各自一条记录，响应须过运行时校验和；HyperX 充电态只认插拔事件帧；雷蛇 Viper V3 Pro SE 只开零权限 Feature 句柄。HECATE 自 #47 改主动查询、开关默认关。全部为贡献者真机、本机未复测。HERO 闲置静音见 CR-81，N9 未核对官方 App 见 CR-84，ATK 显示名与配对表见 CR-98 / CR-99，HECATE 查询阻塞见 CR-100；协议与验证边界见 `hardware/aula.md` §2、`akg.md`、`atk.md`、`hyperx-cf2.md`、`asus-rog.md`、`razer*.md`、`hecate.md` §3。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
@@ -38,7 +38,7 @@
 | 罗技 PRO X 2 LIGHTSPEED 耳机（046D:0AF7） | LIGHTSPEED 2.4G / Centurion | 2.4G 真机验证放电、充电、休眠唤醒与关闭开关后停查；蓝牙走 Windows HFP 节点，USB 有线模式未验证（logitech.md §2）。046D:C54D 的 PRO X 2 是另一台鼠标 |
 | 雷柏 VT3 二代（VID_24AE&PID_1412） | status-report7 被动心跳 | 已打通，零写入。雷柏不是 HID++，勿让 Logitech 插件认领 |
 | 英菲克 ZHEN（VID_1D57&PID_FA65） | report 0x03 被动状态帧 | 已打通，零写入；放电 `0x01` / 充电 `0x03` 已校准（inphic.md §1） |
-| HECATE G5M Pro（VID_35BB&PID_D00B） | report 0x04 被动状态帧 | 代码已接入，默认开、零写入。帧与充放电是贡献者声明，本机未复测（hecate.md §1） |
+| HECATE G5M Pro（VID_35BB&PID_D00B） | 被动 report 0x04 状态帧 + 主动查询 `04 00 00 1A` | 代码已接入，**默认关**（会写帧）。主动查询后电量不再依赖 HECATE Connect，离线按连续 3 次无应答判。贡献者真机、本机未复测（hecate.md §3） |
 | HECATE G3M Pro 升级版（接收器 VID_35BB&PID_D3FB） | 17 字节 `0xFF02` 通道，STATUS `08 03` / POWER `08 04` | 本机实测 50% / 3848 mV，默认关、会写两条只读帧。充电位未验证（hecate.md §2） |
 | AULA F99 Pro（VID_3554&PID_FA09） | `0x13` 会话后读推送 | 代码已接入，默认关。不进 15 秒发现。贡献者声明，本机未复测（aula.md §1） |
 | DELUX M900 Pro（VID_1D57&PID_FA65） | `0x000A` 被动 5 字节帧 | 代码已接入，默认关。与英菲克同 VID/PID；2026-10-19 本机没扫到 `1D57`（delux.md §1） |
@@ -58,7 +58,8 @@
 | 雷神 ML903 NearLink Se（VID_369B&PID_0234） | `0xA0` 设备信息查询，TLV `0x0225` = 电量 | 代码已接入，默认关。贡献者实机确认（ak870-ml903.md） |
 | EDIFIER W820NB | HFP 网关 `DEVPKEY_Device_BatteryLevel` | 已打通，与设置页一致 |
 | 华硕 AURA、Virtual Multitouch、lifeme 音箱、弱水时砂 2.4G（38FF:0001） | — | 与电量无关 / 无电量通道（rose.md），勿探测 |
-| 雷蛇毒蝰 V4 Pro（接收器 1532:00E6 / 本体 1532:00E5） | 经典 90 字节 feature 查询 | 代码已接入，默认关、会写帧。贡献者真机 100%，本机未复测；有线模式 `0x84` 充电查询无有效应答，充电态保持 Unknown（razer.md） |
+| 雷蛇（毒蝰 V4 Pro `1532:00E6`/`00E5`；BlackShark V2 Pro `1532:0555`；Viper V3 Pro SE `1532:00DF`） | 经典 90 字节 feature 查询；耳机独立 PA 协议；SE 只开零权限 Feature 句柄 | 代码已接入，默认关、会写帧。均贡献者真机、本机未复测；V4 Pro 有线 `0x84` 充电查询无应答，充电态 Unknown（razer.md、razer-headset.md、razer-viper-se.md） |
+| 华硕 ROG Strix Scope II 96（Omni 接收器 `0B05:1ACE`） | 按物理接收器分组、核实通道 2 配对型号后才查询电量 | 代码已接入，默认关、会写帧。贡献者真机 95%，本机未复测（asus-rog.md） |
 | 索尼 INZONE H9 II（054C:0FA8） | `0xFF04` 控制传输 SET_REPORT 查询 | 代码已接入，默认关、会写帧。贡献者真机 78→94%（充电中），关掉 INZONE Hub 仍可读；本机未复测（inzone-h9.md） |
 | AULA HERO 68 Air（`372E:106C`，UUID `12000000000A`） | Bytech 8K 分片查询 + ACK | 代码已接入，默认关、会写帧，与 F99 Pro 共用 Aula 开关。贡献者真机 10% 放电/充电，本机未复测（aula.md §2） |
 | AKG N9 Hybrid（接收器 `0ECB:20D9`） | 固定 RACE 电量查询，控制输入读取 | 代码已接入，默认关、会写帧。贡献者真机 50% / 100%，充电态 Unknown，本机未复测（akg.md） |
@@ -87,14 +88,10 @@
 
 ## 5. 给下一个 AI 的注意事项
 
-1. **开工**：`docs/README.md` 症状速查 → 本文件 → 专题文档。文档比记忆新。
-2. **硬件**：绝不盲扫；只发有出处的帧。插件开关就是写入授权（`PluginEnabled[Name]`）。熔断和退避在基类里，子类别绕过。详见 `hardware/safety.md`。
-3. **dongle 静音**：本应用、浏览器里的 M HUB、官方 HUB 谁持有会话谁工作。崩溃进程会把会话粘死。先看 safety.md §2，别急着改协议。
-4. **构建**：用 sln，从 `bin\x64\...\win-x64\` 启动。应用在跑时先结束进程，否则发布会锁文件。见 `dev/build.md`。
-5. **启动方式**：工具拉起的进程会被进程树清掉。用 `explorer.exe "VigilWatt.App.exe"`。强杀会按 safety.md §2 占死 dongle 会话。
-6. **雷柏**：停手 = dongle 静音，静音不是离线。离线主判据是 `[18].bit7`，走约 6 秒确认，不要改成立刻离线。见 rapoo.md。
-7. **插件配置分三层**：协议事实和安全声明必须按品牌；离线策略集中在 `OfflinePolicy`。`CountPollFailures` 与 `SupportsPassiveListen` 是两件事，合成一个布尔会让迈从关机后永远不离线。
-8. **发现节拍**：15 秒节拍只给 `SupportsFastDiscovery`（零写入）或 `SupportsDiscoveryProbe`（`ProbeCooldown` 兜住写入）。会写帧的新插件先看 safety.md。
+1. **dongle 静音**：本应用、浏览器里的 M HUB、官方 HUB 谁持有会话谁工作。崩溃进程会把会话粘死。先看 safety.md §2，别急着改协议。
+2. **启动方式**：工具拉起的进程会被进程树清掉。用 `explorer.exe "VigilWatt.App.exe"`。强杀会按 safety.md §2 占死 dongle 会话。
+3. **雷柏**：停手 = dongle 静音，静音不是离线。离线主判据是 `[18].bit7`，走约 6 秒确认，不要改成立刻离线。见 rapoo.md。
+4. **插件配置分三层**：协议事实和安全声明必须按品牌；离线策略集中在 `OfflinePolicy`。`CountPollFailures` 与 `SupportsPassiveListen` 是两件事，合成一个布尔会让迈从关机后永远不离线。
 
 ## 6. 关键文件速查
 

@@ -30,6 +30,9 @@
 | 盖世小鸡 GameSir | G7 Pro CE | `3537` | [gamesir.md](gamesir.md) | 贡献者真机 |
 | ATK / VXE | 无线鼠标（F1 Pro Max / F1 V3 ULTIMATE+） | `373B:101B` / `101A` / `1303` | [atk.md](atk.md) | 本机验证 |
 | HyperX | Cloud Flight 2 飓风炫彩版 | `03F0:0AC1` | [hyperx-cf2.md](hyperx-cf2.md) | 本机验证 |
+| 雷蛇 RAZER | 毒蝰 V4 Pro（接收器 / 本体） | `1532:00E6` / `00E5` | [razer.md](razer.md) | 贡献者真机 100%；充电态 Unknown |
+| 雷蛇 RAZER | BlackShark V2 Pro (2023) / Viper V3 Pro SE | `1532:0555` / `00DF` | [razer-headset.md](razer-headset.md) · [razer-viper-se.md](razer-viper-se.md) | 贡献者真机 77% / 58% |
+| 华硕 ASUS ROG | Strix Scope II 96（Omni 接收器） | `0B05:1ACE` | [asus-rog.md](asus-rog.md) | 贡献者真机 95% |
 | 前行者 EWEADN | X87 键盘 / S9 鼠标 | `0C45:FEFE` / `372E:1026` | [eweadn.md](eweadn.md) | 贡献者真机 |
 | 黑爵 AJAZZ | AK870 | `3151:4011` | [ak870-ml903.md](ak870-ml903.md) | 贡献者真机 |
 | 雷神 THUNDEROBOT | ML903 NearLink Se | `369B:0234` | [ak870-ml903.md](ak870-ml903.md) | 贡献者真机 |
