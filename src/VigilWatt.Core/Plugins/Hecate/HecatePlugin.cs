@@ -23,7 +23,6 @@ public sealed class HecatePlugin : BatteryPluginBase
     // 会写帧的插件不进 15 秒快速发现档（避免探测写入被抬到 4 倍频），走 ≤60 秒常规节拍。
     public override bool SupportsFastDiscovery => false;
     protected override TimeSpan ProbeCooldown => TimeSpan.FromSeconds(5);
-    protected override bool WritesEnabled => true;
     protected override bool ProbeWrites => true;
     protected override bool SupportsPassiveListen => true;
 
