@@ -563,6 +563,40 @@ Windows 任务栏**自己就有一个电池图标**，贴片再重复一遍纯�
 **规则**：高度每拍按 `rect` + `dpi / 96` 重算；**高度或缩放任一变化都要重画**（宽度、字号、圆角都按缩放算）。
 `dpi == 0` 时直接跳过这一拍，不要按 1.0 兜底。
 
+### 16.12 显示配置切换时贴片"多一个并重叠"（2026-10-26 修）
+
+**症状**：插拔外接屏 / 换缩放之后，任务栏上出现两个贴片、互相叠着（位置差几像素），重启应用才消失。
+
+**现场证据**（只读枚举，用户退出前那台机器）：同一个 `Shell_TrayWnd` 下有 **2 个** `VigilWattTaskbarPill`
+子窗口（同 pid、同 tid、都 visible、rect 差 2px），另有 **2 个** `VigilWattTaskbarPillTip` → 说明确实存在过
+两个 `TaskbarPillWindow` 实例。残留那个停在 `gap = 8`（120 dpi）算出的默认位，而当时任务栏已是 96 dpi →
+**它没有任何实例在驱动**（活实例每秒重算位置、DPI 一变就自毁重建），是"dispose 过但窗口没销毁"的僵尸。
+
+**触发**：日志里 `任务栏贴片：配置的屏幕当前不在，临时贴到 显示器 1` 与 `… 显示器 2` 相隔 **250ms**，
+40 秒后又是一对。显示配置过渡期任务栏句柄与 DPI 连续抖，而 `Reconcile` 每抖一次就"销毁旧实例 + 建新实例"，
+于是 1 秒内连开两次窗口。
+
+**已排除**：跨进程子窗口的销毁本身不可靠——隔离进程实测 `SetParent` + `WS_CHILD` + `UpdateLayeredWindow`
+真位图后 `DestroyWindow` **8/8 成功**、`IsWindow` 立刻为 false。问题在生命周期代码，不在 Win32。
+
+**代码里的四个缺口**（任一命中都会留僵尸）：`ReleaseWindow` 忽略 `DestroyWindow` 返回值；`Dispose()` 里
+`EndDrag()`/事件解绑/`HideTip()` 都排在 `ReleaseWindow()` 之前且无 try/finally；`_current` 静态字段在构造里
+直接覆盖、无"上一实例先 Dispose"约束；`EnsureWindow()` 只信 `IsWindow(_hwnd)`。
+
+**修法**：
+1. `Reconcile` 去抖：**屏幕 / 任务栏句柄 / DPI 连续 2 拍一致**才重建；**任务栏矩形变化不再触发重建**
+   （窗口自己每拍按 §16.11 重算尺寸与位置）。启动与设置保存走 `immediate` 跳过去抖。
+2. `EnsureWindow` 建窗后清扫同一任务栏下**本进程**的其它 `VigilWattTaskbarPill`（只认同 pid，Debug 版与
+   安装版同时跑不能互杀）——漏网的活不过一次建窗。
+3. 构造时先 `Dispose()` 上一个 `_current`：进程内只允许一个贴片实例。
+4. `Dispose()` 的 `ReleaseWindow()` 移进 `finally`；`DestroyWindow` 失败记 `Log.Warn` 并隐藏重试。
+
+**验证**：`python scripts/check-taskbar-pill.py`（数窗口，>1 返回码 1）。插拔外接屏 + 切
+「仅电脑屏幕 / 仅第二屏 / 扩展」各一次，每次之后贴片窗口数必须恒为 1。
+
+**未定论**：本次没有在复现时抓到"到底漏销毁还是实例被覆盖"（`Log.Debug` 没开，也没有实例→hwnd 映射），
+所以修法是"堵死四个缺口 + 自愈"，不是单点定因。建窗与清残留都会记日志，下次复现能自证。见 BACKLOG CR-107。
+
 ## 17. WinUI3 窗口的两层背景：小组件白底（2026-10-10 起；§17.1 于 10-12 更正）
 
 > **2026-10-12 起，本节只对"小组件"（`WidgetWindow`，仍是 WinUI 3 窗口）适用。**

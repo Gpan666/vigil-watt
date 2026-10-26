@@ -78,6 +78,8 @@ public sealed class TaskbarPillWindow : IDisposable
 
     public TaskbarPillWindow(IntPtr taskbarHwnd, Action? onInvalidate = null)
     {
+        // 进程内只允许一个贴片窗口：上一实例还在就先收掉，否则它的窗口没人驱动、会冻在屏幕上
+        _current?.Dispose();
         _current = this;
         _taskbar = taskbarHwnd;
         _onInvalidate = onInvalidate;
@@ -156,16 +158,26 @@ public sealed class TaskbarPillWindow : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _timer.Stop();
-        _dragTimer.Stop();
-        EndDrag();
-        App.Services.Manager.DeviceUpdated -= OnDeviceUpdated;
-        App.Services.Manager.DevicesChanged -= OnDevicesChanged;
-        HideTip();
-        ReleaseWindow();
-        _taskbar = IntPtr.Zero;
-
-        if (ReferenceEquals(_current, this)) _current = null;
+        try
+        {
+            _timer.Stop();
+            _dragTimer.Stop();
+            EndDrag();
+            App.Services.Manager.DeviceUpdated -= OnDeviceUpdated;
+            App.Services.Manager.DevicesChanged -= OnDevicesChanged;
+            HideTip();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"任务栏贴片：释放前置步骤失败: {ex.Message}");
+        }
+        finally
+        {
+            // 窗口销毁必须在 finally：上面任一步抛异常都不能把窗口留在屏幕上（它会变成没人驱动的残留）
+            ReleaseWindow();
+            _taskbar = IntPtr.Zero;
+            if (ReferenceEquals(_current, this)) _current = null;
+        }
     }
 
     // ---------- 窗口 ----------
@@ -206,9 +218,32 @@ public sealed class TaskbarPillWindow : IDisposable
         }
 
         AttachToTaskbar();
+        SweepOrphanWindows();
         EnsureTipWindow();
         _windowDpi = TaskbarDpi();
         Native.ShowWindow(_hwnd, Native.SW_SHOWNOACTIVATE);
+        Log.Debug($"任务栏贴片：建窗 0x{_hwnd.ToInt64():X}，任务栏 0x{_taskbar.ToInt64():X}");
+    }
+
+    /// <summary>清掉本进程留在同一任务栏上的其它贴片窗口：重建风暴里漏销毁的那个没人驱动，会冻在旧位置。</summary>
+    private void SweepOrphanWindows()
+    {
+        if (_taskbar == IntPtr.Zero || _hwnd == IntPtr.Zero) return;
+
+        uint self = (uint)Environment.ProcessId;
+        var child = Native.FindWindowExW(_taskbar, IntPtr.Zero, ClassName, null);
+        while (child != IntPtr.Zero)
+        {
+            var next = Native.FindWindowExW(_taskbar, child, ClassName, null);
+            // 只扫本进程：Debug 版与安装版同时跑时，不能把对方正在用的贴片杀掉
+            if (child != _hwnd && Native.GetWindowThreadProcessId(child, IntPtr.Zero) == self)
+            {
+                Log.Warn($"任务栏贴片：清掉残留窗口 0x{child.ToInt64():X}");
+                Native.ShowWindow(child, Native.SW_HIDE);
+                Native.DestroyWindow(child);
+            }
+            child = next;
+        }
     }
 
     private static void RegisterTipClassOnce()
@@ -248,7 +283,7 @@ public sealed class TaskbarPillWindow : IDisposable
         ReleaseTipDib();
         if (_tipHwnd != IntPtr.Zero)
         {
-            if (Native.IsWindow(_tipHwnd)) Native.DestroyWindow(_tipHwnd);
+            DestroyWindowChecked(_tipHwnd);
             _tipHwnd = IntPtr.Zero;
         }
     }
@@ -299,7 +334,7 @@ public sealed class TaskbarPillWindow : IDisposable
         ReleaseTipWindow();
         if (_hwnd != IntPtr.Zero)
         {
-            if (Native.IsWindow(_hwnd)) Native.DestroyWindow(_hwnd);
+            DestroyWindowChecked(_hwnd);
             _hwnd = IntPtr.Zero;
         }
         _windowDpi = 0;
@@ -311,6 +346,18 @@ public sealed class TaskbarPillWindow : IDisposable
         _hoverId = null;
         _hoverArmed = false;
         _needRender = true;
+    }
+
+    /// <summary>销毁失败不能当成功：句柄照样清零后窗口就没人管了，只会冻在屏幕上（贴片"多一个"的成因之一）。</summary>
+    private static void DestroyWindowChecked(IntPtr hwnd)
+    {
+        if (!Native.IsWindow(hwnd)) return;
+        if (Native.DestroyWindow(hwnd)) return;
+
+        int err = Marshal.GetLastWin32Error();
+        Log.Warn($"任务栏贴片：窗口销毁失败 0x{hwnd.ToInt64():X}，err={err}，改为隐藏后重试");
+        Native.ShowWindow(hwnd, Native.SW_HIDE);
+        Native.DestroyWindow(hwnd);
     }
 
     // ---------- 更新 ----------

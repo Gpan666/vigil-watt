@@ -594,6 +594,10 @@ internal static class Native
     [DllImport("user32.dll")]
     public static extern bool IsWindow(IntPtr hwnd);
 
+    /// <summary>贴片清扫残留窗口时要排除别的进程（Debug 版与安装版同时跑不能互相杀）。</summary>
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hwnd, IntPtr processId);
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool DestroyWindow(IntPtr hwnd);
 
